@@ -1,0 +1,25 @@
+# Arquivos Revit (ficam na pasta-base do servidor, nunca no repositório)
+*.rvt
+*.rte
+*.rfa
+*.rft
+*.000?.rvt
+*.000?.rfa
+backup/
+
+# Dados de projetos e clientes
+*.skill.json
+PROJETO_REFERENCIA/
+extracao_*.md
+LOG_*.md
+
+# Configuração local de cada escritório/computador
+installer/instalacao.local.json
+config.json
+_config/maquinas/
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+*.zip
