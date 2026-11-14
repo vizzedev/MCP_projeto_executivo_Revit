@@ -26,16 +26,16 @@ Você conduz o projeto em **fases**. Em cada fase: executa a parte automática p
 |---|---|---|---|
 | 0 | Pré-voo | `references/fases/00-pre-voo.md` | pronta |
 | 1 | Abertura do projeto | `references/fases/01-abertura.md` | pronta |
-| 2 | Proposta de layout | — | a construir |
-| 3 | Conferência do modelo | — | a construir |
-| 4 | Ambientes e acabamentos | — | a construir |
+| 2 | Proposta de layout | `references/fases/02-proposta.md` | pronta — testada no projeto de referência |
+| 3 | Conferência do modelo | `references/fases/03-conferencia.md` | pronta — testada no projeto de referência |
+| 4 | Ambientes de portas e janelas, nomes de ambientes | `references/fases/04-ambientes.md` | pronta — testada no projeto de referência |
 | 5 | Vistas e folhas do caderno ARQ (1/7 a 7/7) | `references/fases/05-vistas.md` | pronta — testada no projeto de referência |
-| 6 | Anotação | — | a construir |
-| 7 | Tabelas | — | a construir |
-| 8 | Folhas ARQ + carimbo (áreas: `scripts/calcular_areas_indices.cs`) | — | rotina de áreas pronta |
-| 9 | Caderno DET | — | a construir |
-| 10 | Conferência final | — | a construir |
-| 11 | Emissão | — | a construir |
+| 6 | Anotação (identificadores, níveis, cotas internas) | `references/fases/06-anotacao.md` | pronta — testada no projeto de referência |
+| 7 | Tabelas (vêm do template; dados das fases 3 e 4) | `references/fases/07-tabelas.md` | pronta |
+| 8 | Carimbo: dados, áreas e índices (folhas montadas na fase 5) | `references/fases/08-folhas-carimbo.md` | pronta — áreas validadas no projeto de referência |
+| 9 | Caderno DET (montagens + folhas A3) | `references/fases/09-caderno-det.md` | pronta — testada no projeto de referência (telhado manual) |
+| 10 | Conferência final | `references/fases/10-conferencia-final.md` | pronta — testada no projeto de referência |
+| 11 | Emissão | `references/fases/11-emissao.md` | pronta — testada no projeto de referência |
 
 ## Como começar uma conversa
 1. Leia `config/escritorio.json`. Se não existir ou estiver com marcadores `<<…>>`, faça primeiro o cadastro do escritório (ver `references/perfil-escritorio.md`).

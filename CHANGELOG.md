@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.3.0 — 14/11/2026
+Todas as fases com rotina e documentação, testadas numa cópia do projeto de referência e conferidas por imagem
+contra as folhas emitidas pelo arquiteto.
+
+### Novas fases
+- **Fase 2 — Proposta de layout** (`02_proposta.cs`): uma folha por pavimento, planta centralizada no alto, implantação
+  e legenda na primeira folha. Posições a ~10 mm das do arquiteto.
+- **Fase 3 — Conferência do modelo** (`03_conferir_modelo.cs`, `03_corrigir_modelo.cs`): pendências em três níveis
+  (BLOQUEIA / CORRIGIR / ATENÇÃO), incluindo esquadrias sem marca de tipo; correção de ambientes não colocados e paredes curtas.
+- **Fase 4 — Ambientes** (`04_ambientes.cs`): campo AMBIENTE por tipo de porta/janela a partir dos ambientes que cada
+  uma liga; agrupa quartos, WCs e circulação; portas externas como "<ambiente>/ÁREA EXTERNA"; sem ambiente = "FACHADA <lado>".
+  Só preenche vazios, a menos que o usuário peça para sobrescrever.
+- **Fase 6 — Anotação** (`06_anotar_planta.cs`): identificadores de portas, janelas e ambientes, cotas de nível de piso
+  e cotas internas; idempotente. No teste: mesmas 23 portas e 10 janelas identificadas pelo arquiteto.
+- **Fase 7 — Tabelas** e **Fase 8 — Carimbo**: documentadas (tabelas vêm do template; dados das fases 3 e 4; áreas e índices).
+- **Fase 9 — Caderno DET** (`09_montagens.cs`, `09_montar_folhas_det.cs`): montagens de esquadrias (1 por marca de tipo),
+  bancadas (com louças) e pergolados/churrasqueira; elevação escolhida pela largura real da peça (algumas famílias têm
+  eixos girados); recorte ajustado à peça; vista de topo girada para alinhar com a elevação; folhas A3 empacotadas
+  com as tabelas de portas e janelas no rodapé; modo `refazer_elevacoes`.
+- **Fase 10 — Conferência final** (`10_conferencia_final.cs`) e **Fase 11 — Emissão** (`11_emitir.cs`).
+
+### Cuidados registrados
+- Desfazer montagem por script abre um diálogo modal no Revit e trava o MCP: a skill nunca desfaz montagens.
+
+### Continua manual
+- Folha de telhado do DET (madeiramento), cotas L/H das esquadrias, textos de especificação das bancadas.
+- Logotipo do escritório no carimbo; levar ao template master a hachura e a região do lote criadas pela fase 5.
+
+### Pendente
+- Piloto num projeto real; folha extra do pavimento superior em sobrados; instalador `.exe`.
+
 ## 0.2.0 — 14/11/2026
 Fase 5 completa: vistas e montagem automática das 7 folhas do caderno ARQ, testadas numa cópia do projeto de referência
 e conferidas por imagem contra as folhas emitidas pelo arquiteto.
