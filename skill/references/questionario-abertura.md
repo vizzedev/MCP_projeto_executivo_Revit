@@ -18,6 +18,19 @@ Coluna "Parâmetro" = nome exato usado em `01_preencher_dados.cs`.
 | Nome do projeto (ex.: "PROJETO UNIRESIDENCIAL") | Nome do projeto | nativo |
 | Zona urbanística e limites de TO, TP e CA | — | grava no `<projeto>.skill.json` para a conferência final |
 
+### Bloco 2b — Situação do lote (para a planta de situação, `05_situacao.cs`)
+Testada e profundidade saem do modelo (linhas de propriedade ou paredes). Se o cliente/loteadora tiver a **planta do loteamento**
+(imagem, PDF ou DWG), peça o arquivo: ela é inserida com `05_situacao_importar.cs` e o arquiteto só marca o lote.
+| Pergunta | Parâmetro do script | Observação |
+|---|---|---|
+| Número do lote e quadra | lote, quadra | ex.: 12 / B |
+| Rua da frente | rua da frente | nome completo, ex.: RUA DAS FLORES |
+| Distância da divisa do lote até a esquina mais próxima (m) | distância | da matrícula ou da planta do loteamento |
+| Nome da rua da esquina e de que lado ela fica, olhando o lote da rua (D/E) | rua da esquina, lado | |
+| Números dos lotes vizinhos (esquerda e direita, olhando da rua) | vizinhos | opcional; sem eles o desenho mostra "—" |
+| Para qual ponto cardeal a frente do lote está voltada (N, NE, L, SE, S, SO, O, NO) | cardeal | gira o símbolo de norte; o norte do modelo costuma não estar ajustado |
+| Largura das ruas (m) | largura | padrão 12 |
+
 ## Bloco 3 — Projeto
 | Pergunta | Onde vai | Observação |
 |---|---|---|

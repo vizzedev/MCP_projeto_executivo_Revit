@@ -4,7 +4,7 @@ Skill do Claude que conduz um projeto de arquitetura no **Revit**, do arquivo ze
 
 Genérica: serve a qualquer escritório. Dados do escritório ficam no perfil (`skill/config/escritorio.json`), nunca no código.
 
-> **Status:** em construção — versão 0.1. Prontas: fases 0 (pré-voo) e 1 (abertura do projeto) e a rotina de áreas e índices do carimbo. Demais fases em desenvolvimento.
+> **Status:** em construção — versão 0.2. Prontas: fases 0 (pré-voo), 1 (abertura do projeto) e 5 (vistas e montagem das 7 folhas do caderno ARQ), além da rotina de áreas e índices do carimbo. Demais fases em desenvolvimento.
 
 ## Como funciona
 
@@ -48,6 +48,16 @@ docs/ESPECIFICACAO.md      → especificação completa da skill
 | `01_criar_projeto.cs` | 1 | Cria e salva o projeto a partir da cópia local (nunca sobrescreve) |
 | `01_preencher_dados.cs` | 1 | Grava Informações do projeto (carimbo) e cotas dos níveis |
 | `01_ajustar_pavimentos.cs` | 1 | Uma folha de proposta de layout por pavimento |
+| `05_plantas.cs` | 5 | Garante as plantas do caderno (executivo, tomadas, iluminação, forro, paginação, cobertura, implantação) e avisa as vazias |
+| `05_situacao.cs` | 5 | Planta de situação vetorial: lote hachurado, vizinhos, ruas, distância à esquina e norte |
+| `05_situacao_importar.cs` | 5 | Planta de situação a partir da imagem/PDF do loteamento |
+| `05_propor_cortes.cs` | 5 | Propõe 4 cortes (2 transversais, 2 longitudinais) para aprovação do arquiteto |
+| `05_criar_fachadas.cs` | 5 | 4 fachadas com frente detectada pela calçada; oculta o muro de divisa na frente de cada uma |
+| `05_vistas_ambientes.cs` | 5 | Vistas de iluminação (1 por ambiente) e conjuntos de paginação (planta, 4 paredes, 2 isométricas) |
+| `05_perspectivas.cs` | 5 | Perspectivas dos cortes e das laterais |
+| `05_montar_folhas.cs` | 5 | Folhas 3/7 (cortes) e 4/7 (fachadas) |
+| `05_montar_folhas_ambientes.cs` | 5 | Folhas 6/7 (forro e iluminação) e 7/7 (paginação) |
+| `05_montar_folhas_gerais.cs` | 5 | Folhas 1/7 (planta executiva, implantação, tabelas de esquadrias), 2/7 (cobertura e situação) e 5/7 (iluminação, tomadas, tabela luminotécnica) |
 | `calcular_areas_indices.cs` | 8 | Áreas, taxas de ocupação/permeabilidade e índice de aproveitamento a partir das regiões preenchidas da implantação |
 
 ## Regras de segurança da skill

@@ -29,7 +29,7 @@ Você conduz o projeto em **fases**. Em cada fase: executa a parte automática p
 | 2 | Proposta de layout | — | a construir |
 | 3 | Conferência do modelo | — | a construir |
 | 4 | Ambientes e acabamentos | — | a construir |
-| 5 | Vistas | — | a construir |
+| 5 | Vistas e folhas do caderno ARQ (1/7 a 7/7) | `references/fases/05-vistas.md` | pronta — testada no projeto de referência |
 | 6 | Anotação | — | a construir |
 | 7 | Tabelas | — | a construir |
 | 8 | Folhas ARQ + carimbo (áreas: `scripts/calcular_areas_indices.cs`) | — | rotina de áreas pronta |

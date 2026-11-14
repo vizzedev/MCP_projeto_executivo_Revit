@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.0 — 14/11/2026
+Fase 5 completa: vistas e montagem automática das 7 folhas do caderno ARQ, testadas numa cópia do projeto de referência
+e conferidas por imagem contra as folhas emitidas pelo arquiteto.
+
+### Vistas
+- `05_plantas.cs`: usa as plantas que já vêm no template; cria só as que faltarem e avisa as que estão sem conteúdo.
+- `05_situacao.cs` (novo): planta de situação vetorial a partir das medidas do lote no modelo e de dados do questionário.
+- `05_situacao_importar.cs` (novo): alternativa com a imagem/PDF da planta do loteamento.
+- `05_propor_cortes.cs`: **correção** — o plano de corte ficava na borda da casa e não no eixo pedido; margens verticais menores.
+- `05_criar_fachadas.cs`: oculta o muro de divisa na frente de cada fachada; extensão sem a rua; recorte vertical mais justo.
+- `05_vistas_ambientes.cs`: iluminação na parede com louças (áreas molhadas) ou com mais pontos elétricos; paginação com
+  4 paredes num marcador só e isométricas mostrando o interior (caixa na face interna das paredes, abaixo do forro).
+- `05_perspectivas.cs` (novo): perspectivas dos cortes (escolhe o corte que mostra a menor parte da casa) e das laterais.
+
+### Folhas
+- `05_montar_folhas.cs` (3/7 e 4/7), `05_montar_folhas_ambientes.cs` (6/7 e 7/7) e `05_montar_folhas_gerais.cs` (1/7, 2/7 e 5/7):
+  vistas empilhadas pela altura real, tabelas ancoradas na base, legendas à direita ou embaixo, escala das perspectivas
+  ajustada quando não cabem, conferência de área útil (moldura menos o carimbo) e de sobreposição.
+
+### Documentação
+- `references/fases/05-vistas.md` (novo) e `references/gabarito-folhas.md` (novo).
+- Questionário: bloco "Situação do lote".
+
+### Pendente
+- Fases 2, 3, 4 e 6 a 11; folha extra para o pavimento superior em sobrados; instalador `.exe`.
+- Incluir no template master o padrão "VZ-Hachura Cruzada 45" e a região "VZ-Lote do Projeto" (hoje criados pelo script).
+
 ## 0.1.0 — 14/11/2026
 Primeira versão.
 
