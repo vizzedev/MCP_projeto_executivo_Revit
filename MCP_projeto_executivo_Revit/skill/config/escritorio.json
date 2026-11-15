@@ -1,0 +1,21 @@
+{
+  "nome": "<<NOME DO ESCRITÓRIO>>",
+  "endereco_contato": "<<Endereço - telefone - rede social>>",
+  "prefixo": "VZ-",
+  "responsavel_padrao": { "autor": "<<ARQ. NOME>>", "cau": "<<CAU: 000000-0>>" },
+  "executor_padrao": { "nome": "<<ENG. NOME>>", "crea": "<<CREA: 0000 D/UF>>" },
+  "observacoes_gerais": "<<1. ... 2. ...>>",
+  "caminhos": {
+    "pasta_base": "<<X:\\pasta\\base>>",
+    "template_master": "<<X:\\pasta\\base\\01_TEMPLATE\\TEMPLATE_MASTER_v1.rte>>",
+    "pasta_projetos": "<<pasta padrão dos projetos>>"
+  },
+  "carimbos": {
+    "proposta": "VZ-Prancha A1 Proposta Layout",
+    "arq": "VZ-Prancha A1 Executivo Arquitetônico",
+    "det": "VZ-Prancha A3 Executivo Interiores/Detalhamento"
+  },
+  "numeracao": { "arq": "n/N", "det": "0n/0N" },
+  "vista_implantacao": "IMPLANTAÇÃO",
+  "revit_versao": "2025"
+}
