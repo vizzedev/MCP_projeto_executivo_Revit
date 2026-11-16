@@ -1,96 +1,251 @@
-# MCP Projeto Executivo Revit
+<p align="center">
+  <img src="docs/banner.png" alt="Projeto Executivo Revit — skill do Claude" width="100%">
+</p>
 
-Skill do Claude que conduz um projeto de arquitetura no **Revit**, do arquivo zero à emissão — proposta de layout, executivo arquitetônico (ARQ) e detalhamento (DET) — de forma padronizada, usando o **MCP do Revit** (suplemento mcp-servers-for-revit).
+<p align="center">
+  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.6.0-A51C1C?style=flat-square">
+  <img alt="Revit" src="https://img.shields.io/badge/Revit-2025-1E1E1E?style=flat-square">
+  <img alt="MCP" src="https://img.shields.io/badge/MCP-mcp--servers--for--revit-1E1E1E?style=flat-square">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1E1E1E?style=flat-square">
+  <img alt="Pavimentos" src="https://img.shields.io/badge/casas-1%20ou%20mais%20pavimentos-6B6B6B?style=flat-square">
+</p>
 
-Genérica: serve a qualquer escritório. Dados do escritório ficam no perfil (`skill/config/escritorio.json`), nunca no código.
+<p align="center">
+  <b>Skill do Claude que faz o detalhamento técnico executivo de projetos de arquitetura no Revit</b><br>
+  vistas · cotas · textos · identificadores · tabelas · carimbo · pranchas ARQ e DET · emissão
+</p>
 
-> **Status:** versão 0.5 — todas as fases (0 a 11) com rotina, testadas numa cópia do projeto de referência e num piloto criado do zero (casa térrea 10 × 10 m, da abertura à emissão). Continuam manuais: folha de telhado do DET, cotas L/H das esquadrias, textos de especificação das bancadas, logotipo no carimbo. Pendências do template master e próximos passos em `skill/references/relatorio-piloto.md`. Instalador em `installer/` (gera o `.exe` com `COMPILAR_EXE.cmd`).
+<p align="center">
+  <a href="#-o-que-a-skill-faz">O que faz</a> ·
+  <a href="#-como-funciona">Como funciona</a> ·
+  <a href="#-fases">Fases</a> ·
+  <a href="#-instalação">Instalação</a> ·
+  <a href="#-estrutura-do-repositório">Estrutura</a> ·
+  <a href="#-scripts">Scripts</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-## Como funciona
+---
 
-1. Cada escritório mantém, num servidor, uma **pasta-base** com o template master (.rte), o projeto de referência e a biblioteca de detalhes.
-2. Em cada computador, o **instalador** prepara o acesso à pasta-base e grava a configuração local.
-3. A **skill** é enviada ao Claude (Customize › Skills › enviar ZIP da pasta `skill/`).
-4. Numa conversa no app desktop do Claude, com o Revit aberto e o servidor do MCP ligado, a skill conduz o projeto fase a fase, com ponto de aprovação do arquiteto ao fim de cada uma.
+> [!IMPORTANT]
+> **A equipe modela, a skill detalha.** Paredes, esquadrias, pisos, forros, cobertura, ambientes e o layout são modelados
+> pela equipe. A skill parte do modelo pronto e faz todo o detalhamento técnico executivo, sem criar, mover ou apagar
+> elementos do projeto.
 
-## Estrutura
+## ✦ O que a skill faz
+
+| A skill faz | Continua com a equipe |
+|---|---|
+| Conferência do modelo, com relatório de pendências | Toda a modelagem, inclusive o layout |
+| Plantas, cortes, fachadas e perspectivas de cada pavimento | Corrigir o que a conferência apontar |
+| Identificadores, cotas e textos de acabamento no padrão do escritório | Escada (não é detalhada pela skill) |
+| Anotação da planta de layout (nomes, cotas em texto, acabamentos) | Folha de telhado do DET e cotas L/H das esquadrias |
+| Tabelas, áreas, taxas e índices no carimbo | Especificações que não estão no modelo |
+| Montagem das pranchas ARQ (A1) e DET (A3), conferência e emissão em PDF | Aprovação de cada fase |
+
+Genérica: serve a qualquer escritório. Os dados do escritório ficam no perfil (`skill/config/escritorio.json`), nunca no código.
+
+## ✦ Como funciona
+
+```mermaid
+flowchart LR
+    A["Equipe modela<br/>a casa no Revit"] --> B["Revit MCP Switch<br/>liga o servidor"]
+    B --> C["Conversa no<br/>Claude Desktop"]
+    C --> D["Skill executa<br/>a fase"]
+    D --> E{"Arquiteto<br/>aprova?"}
+    E -- "ajustes" --> D
+    E -- "aprovado" --> F["Próxima fase"]
+    F --> D
+    F --> G["Emissão<br/>PDF ARQ e DET"]
+```
+
+1. Cada escritório mantém uma **pasta-base** no servidor com o template master, o projeto de referência e as configurações.
+2. Em cada computador, o **instalador** prepara tudo: arquivos da skill, MCP do Revit, guia e atalhos.
+3. A skill é enviada ao Claude uma vez por conta (**Personalizar › Skills**).
+4. Com o Revit aberto e o servidor do MCP ligado, a skill conduz o detalhamento fase a fase e **para em cada ponto de aprovação**.
+
+## ✦ Fases
+
+| # | Fase | O que acontece |
+|:-:|---|---|
+| 0 | Pré-voo | Confere Revit, MCP, arquivos abertos, rede e template (só leitura) |
+| 1 | Recebimento | Registra o projeto modelado, dados do carimbo e pavimentos |
+| 2 | Planta de layout | Anota o layout da equipe e monta a folha de proposta |
+| 3 | Conferência do modelo | Relatório BLOQUEIA / CORRIGIR / ATENÇÃO para a equipe |
+| 4 | Ambientes | Ambiente de cada porta e janela, para as tabelas |
+| 5 | Vistas e folhas | Plantas por pavimento, cortes, fachadas, perspectivas e pranchas ARQ |
+| 6 | Anotação | Identificadores, níveis, cotas e textos de materiais |
+| 7 | Tabelas | Esquadrias e luminotécnica a partir do modelo |
+| 8 | Carimbo e áreas | Regiões de área, taxas, índices e campos do carimbo |
+| 9 | Detalhamento (DET) | Montagens de esquadrias e bancadas em folhas A3 |
+| 10 | Conferência final | Numeração i/N, folhas vazias, carimbo, tabelas, área útil |
+| 11 | Emissão | PDF por caderno (opcional: por folha e DWG) e registro |
+
+<details>
+<summary><b>Padrões de cotas e textos</b></summary>
+<br>
+
+| Prancha | Regra |
+|---|---|
+| Planta executiva | Nenhuma cota dentro do lote. Nas 4 faces, por fora dos muros, 3 linhas: detalhada (limites de paredes e pisos), blocos (divisas, muros, edificação) e total |
+| Layout | Medidas dos ambientes só em texto, no canto de cada ambiente |
+| Tomadas | Ao longo da parede: parede › ponto › ponto › parede |
+| Iluminação | Por ambiente e por fileira; perfis e trilhos pelas pontas |
+| Cobertura | Corpo e beiral separados, mais o total |
+| Cortes | Só na vertical: piso › forro › laje em cada ambiente; à esquerda, piso de cada pavimento e altura total |
+
+Textos (chamadas de materiais, REVEST., PISO, tomadas fora da altura padrão, bancadas) vêm do modelo. O que não estiver no
+modelo vira aviso no relatório; a skill nunca inventa texto.
+</details>
+
+<details>
+<summary><b>Casas de mais de um pavimento</b></summary>
+<br>
+
+- Plantas por pavimento: executivo, layout, tomadas, iluminação, forro e paginação.
+- Cotas externas em todos os pavimentos pela mesma regra do lote (divisas vindas do térreo).
+- Cortes com cadeia por ambiente até a laje de cima e linha de pé-direito por pavimento.
+- Pranchas: um pavimento por folha; dois na mesma folha quando couber (modo `"testar"`), numeração i/N pela quantidade final.
+- Áreas construídas por pavimento e total.
+
+Detalhes em [`skill/references/gabarito-folhas.md`](skill/references/gabarito-folhas.md).
+</details>
+
+## ✦ Instalação
+
+### Para a equipe (uma vez por computador)
+
+| | Passo |
+|:-:|---|
+| **1** | Rode **`InstaladorSkillExecutivoRevit.exe`**: uma janela em cinco telas, com a skill embutida |
+| **2** | Informe a **pasta-base** e, na primeira vez, o perfil do escritório. Se faltar, marque **Instalar o MCP do Revit** |
+| **3** | No fim, a pasta com o ZIP abre com ele selecionado e a tela mostra os passos manuais |
+| **4** | No Claude: **Configurações › Capacidades** › ative a execução de código |
+| **5** | **Personalizar › Skills › + › Criar skill › Enviar uma skill** e envie o ZIP |
+| **6** | Reinicie o Claude Desktop e, no Revit, clique em **Suplementos › Revit MCP Switch** |
+
+O passo a passo ilustrado está no [**guia de uso em PDF**](docs/Guia_Skill_Executivo_Revit.pdf).
+
+### Para o responsável (gerar o instalador)
+
+```bat
+:: em uma máquina Windows com internet, dentro de installer\
+:: opcional: repo.txt com "usuario/repositorio" para o .exe avisar de versões novas
+COMPILAR_EXE.cmd
+```
+
+`montar-pacote.ps1` embute a skill, o guia e as fontes no script e o `ps2exe` gera o `InstaladorSkillExecutivoRevit.exe`.
+O `.exe` funciona sem internet para a skill; usa a internet só para instalar o MCP e verificar versões.
+Distribua o `.exe` pela release do GitHub ou pela pasta-base.
+
+<details>
+<summary><b>Opções do instalador</b></summary>
+<br>
+
+| Opção | Efeito |
+|---|---|
+| `-PastaBase X:\...` | Pasta-base já preenchida |
+| `-Repo usuario/repositorio` | Repositório para avisos de versão |
+| `-RevitAno 2025` | Versão do Revit para o MCP |
+| `-McpRepo usuario/repositorio` · `-McpTag v1.2.0` | Origem e versão do MCP (padrão `LuDattilo/revit-mcp-server`) |
+| `-AtualizarMcp` · `-SemMcp` | Reinstala o MCP · pula a etapa do MCP |
+| `-Previa <pasta>` | Salva imagens das telas e sai (para revisar o visual) |
+</details>
+
+### Requisitos
+
+- **Autodesk Revit 2025** (o template master é 2025)
+- **MCP do Revit** (`mcp-servers-for-revit`), instalado pelo instalador se faltar
+- **Claude Desktop** com execução de código ativada e a pasta-base conectada na conversa
+- **Pasta-base** acessível pelo mesmo caminho em todos os computadores
+
+## ✦ Estrutura do repositório
 
 ```
-skill/                     → o que vira o ZIP enviado ao Claude
-  SKILL.md                 → instruções principais (regras e fases)
-  config/escritorio.json   → perfil do escritório (preencher)
-  references/              → fases, questionário, parâmetros, receitas das pranchas
-  scripts/                 → rotinas C# executadas pelo MCP (send_code_to_revit)
-installer/                 → preparação de cada computador (PUXAR_PASTA_BASE.cmd)
-pasta-base-modelo/         → estrutura e arquivos de configuração da pasta-base
-docs/ESPECIFICACAO.md      → especificação completa da skill
+├── skill/                      o que vira o ZIP enviado ao Claude
+│   ├── SKILL.md                instruções principais: escopo, regras e fases
+│   ├── config/escritorio.json  perfil do escritório
+│   ├── references/             fases, gabaritos das folhas, parâmetros, questionário
+│   └── scripts/                rotinas C# executadas pelo MCP (send_code_to_revit)
+├── installer/                  instalador em janela e gerador do .exe
+├── pasta-base-modelo/          estrutura e configurações da pasta-base
+├── docs/                       guia de uso (PDF), especificação e imagens
+└── CHANGELOG.md
 ```
 
-## Requisitos
+## ✦ Scripts
 
-- Autodesk Revit 2025 (o template master é 2025)
-- Suplemento MCP do Revit (o instalador instala, se faltar) e o servidor ligado no Revit (Suplementos › Revit MCP Switch)
-- App desktop do Claude, com a pasta-base conectada na conversa ("Adicionar pasta")
-- Pasta-base acessível pelo mesmo caminho em todos os computadores
+<details>
+<summary><b>Fases 0 a 4 — preparação e conferência</b></summary>
+<br>
 
-## Instalação (por computador)
+| Script | Função |
+|---|---|
+| `00_preflight.cs` | Confere conexão, arquivos abertos, rede, configuração e template (só leitura) |
+| `00_limpar_template.cs` | Relatório e limpeza das sobras do exemplo no template master (só numa cópia) |
+| `01_preparar_template_local.cs` | Copia o template master para o disco local, só se estiver desatualizado |
+| `01_criar_projeto.cs` | Cria um arquivo a partir da cópia local (só se a equipe pedir) |
+| `01_preencher_dados.cs` | Grava as Informações do projeto (carimbo) e as cotas dos níveis |
+| `01_ajustar_pavimentos.cs` | Uma folha de proposta de layout por pavimento |
+| `02_proposta.cs` | Folhas da proposta de layout, uma por pavimento, com a implantação na primeira |
+| `02_desenhar_lote.cs` | Lote, projeção, cotas e recorte nas implantações sem linhas de propriedade |
+| `03_conferir_modelo.cs` | Conferência do modelo: BLOQUEIA / CORRIGIR / ATENÇÃO (só leitura) |
+| `03_corrigir_modelo.cs` | Correções automáticas, só a pedido da equipe |
+| `04_ambientes.cs` | Campo AMBIENTE das portas e janelas |
+</details>
 
-1. Execute `InstaladorSkillExecutivoRevit.exe` (ou `installer/INSTALAR.cmd`). Na primeira vez ele pede o repositório
-   (`usuario/repositorio`) e a pasta-base. Ele:
-   - baixa a versão mais recente do GitHub;
-   - instala o **MCP do Revit** se faltar (suplemento `mcp-servers-for-revit` no Revit 2025, Node.js e a configuração do
-     Claude Desktop), rodando o instalador oficial do projeto do MCP (`-McpRepo`, padrão `LuDattilo/revit-mcp-server`);
-     `-AtualizarMcp` reinstala, `-SemMcp` pula;
-   - confere unidade de rede, pasta-base, template, Revit, suplemento do MCP e se o servidor do MCP responde;
-   - pede o perfil do escritório (ou usa `<pasta-base>\_config\escritorio.json`, se já existir);
-   - gera na Área de Trabalho o ZIP da skill com o perfil preenchido e abre a pasta;
-   - registra a versão instalada (rodar de novo atualiza).
-2. Envie o ZIP em **Claude › Personalizar › Skills** (o envio é manual em cada conta).
-3. Para gerar o `.exe`: rode `installer/COMPILAR_EXE.cmd` numa máquina Windows (embute a skill com `montar-pacote.ps1`
-   e compila com o módulo ps2exe). Para o .exe avisar de versões novas, crie `installer/repo.txt` com `usuario/repositorio` antes de compilar. O `.exe` funciona sem internet para a skill; usa a internet só para o MCP e avisos de versão.
-   `PUXAR_PASTA_BASE.cmd` continua disponível só para conferir a pasta-base.
+<details>
+<summary><b>Fase 5 — vistas e folhas ARQ</b></summary>
+<br>
 
-## Scripts
+| Script | Função |
+|---|---|
+| `05_plantas.cs` | Plantas do caderno por pavimento, cobertura e implantação; avisa as vazias |
+| `05_situacao.cs` · `05_situacao_importar.cs` | Planta de situação vetorial ou a partir da imagem do loteamento |
+| `05_propor_cortes.cs` | Propõe 4 cortes (2 transversais, 2 longitudinais) para aprovação |
+| `05_criar_fachadas.cs` | 4 fachadas com a frente detectada pela calçada |
+| `05_vistas_ambientes.cs` | Vistas de iluminação e conjuntos de paginação por ambiente |
+| `05_perspectivas.cs` | Perspectivas dos cortes e das laterais |
+| `05_montar_folhas.cs` | Folhas de cortes e de fachadas |
+| `05_montar_folhas_gerais.cs` | Folhas de planta executiva, cobertura e situação, iluminação e tomadas (com modo `"testar"`) |
+| `05_montar_folhas_ambientes.cs` | Folhas de forro e iluminação e de paginação, por pavimento |
+</details>
 
-| Script | Fase | Função |
-|---|---|---|
-| `00_preflight.cs` | 0 | Confere conexão, arquivos abertos, rede, configuração e template (somente leitura) |
-| `01_preparar_template_local.cs` | 1 | Copia o template master para o disco local, só se estiver desatualizado |
-| `01_criar_projeto.cs` | 1 | Cria e salva o projeto a partir da cópia local (nunca sobrescreve) |
-| `01_preencher_dados.cs` | 1 | Grava Informações do projeto (carimbo) e cotas dos níveis |
-| `01_ajustar_pavimentos.cs` | 1 | Uma folha de proposta de layout por pavimento |
-| `02_proposta.cs` | 2 | Folhas da proposta de layout, uma por pavimento, com a implantação na primeira |
-| `02_desenhar_lote.cs` | 2/5 | Lote, projeção da edificação, cotas e recorte nas implantações quando não há linhas de propriedade |
-| `03_conferir_modelo.cs` | 3 | Conferência do modelo (somente leitura): BLOQUEIA / CORRIGIR / ATENÇÃO |
-| `03_corrigir_modelo.cs` | 3 | Correções automáticas aprovadas: ambientes não colocados, paredes curtas, renumerar esquadrias |
-| `04_ambientes.cs` | 4 | Campo AMBIENTE das portas e janelas (propor / aplicar só vazios / aplicar tudo) |
-| `05_plantas.cs` | 5 | Garante as plantas do caderno (executivo, tomadas, iluminação, forro, paginação, cobertura, implantação) e avisa as vazias |
-| `05_situacao.cs` | 5 | Planta de situação vetorial: lote hachurado, vizinhos, ruas, distância à esquina e norte |
-| `05_situacao_importar.cs` | 5 | Planta de situação a partir da imagem/PDF do loteamento |
-| `05_propor_cortes.cs` | 5 | Propõe 4 cortes (2 transversais, 2 longitudinais) para aprovação do arquiteto |
-| `05_criar_fachadas.cs` | 5 | 4 fachadas com frente detectada pela calçada; oculta o muro de divisa na frente de cada uma |
-| `05_vistas_ambientes.cs` | 5 | Vistas de iluminação (1 por ambiente) e conjuntos de paginação (planta, 4 paredes, 2 isométricas) |
-| `05_perspectivas.cs` | 5 | Perspectivas dos cortes e das laterais |
-| `05_montar_folhas.cs` | 5 | Folhas 3/7 (cortes) e 4/7 (fachadas) |
-| `05_montar_folhas_ambientes.cs` | 5 | Folhas 6/7 (forro e iluminação) e 7/7 (paginação) |
-| `05_montar_folhas_gerais.cs` | 5 | Folhas 1/7 (planta executiva, implantação, tabelas de esquadrias), 2/7 (cobertura e situação) e 5/7 (iluminação, tomadas, tabela luminotécnica) |
-| `06_anotar_planta.cs` | 6 | Identificadores de portas, janelas e ambientes, cotas de nível e cotas externas (3 linhas por face) da planta executiva |
-| `06_cotar_pranchas.cs` | 6 | Cotas por prancha: layout, tomadas, iluminação, cobertura e cortes |
-| `06_textos.cs` | 6 | Textos das pranchas a partir do modelo: chamadas de materiais, revestimentos, forro, tomadas, bancadas |
-| `00_limpar_template.cs` | — | Relatório e limpeza das sobras do exemplo no template master (só numa cópia) |
-| `09_montagens.cs` | 9 | Montagens (assemblies) de esquadrias, bancadas e elementos especiais, com elevação, topo e 3D |
-| `09_montar_folhas_det.cs` | 9 | Folhas A3 do caderno DET a partir das montagens, com as tabelas de portas e janelas |
-| `10_conferencia_final.cs` | 10 | Numeração i/N, folhas vazias, campos do carimbo, tabelas vazias, vistas fora da área ou sobrepostas |
-| `11_emitir.cs` | 11 | PDF combinado por caderno (opcional: PDF por folha e DWG) e registro EMISSAO.txt |
-| `08_regioes_areas.cs` | 8 | Regiões de área construída, permeável e piscina a partir dos pisos do modelo |
-| `calcular_areas_indices.cs` | 8 | Áreas, taxas de ocupação/permeabilidade e índice de aproveitamento a partir das regiões preenchidas da implantação |
+<details>
+<summary><b>Fases 6 a 11 — anotação, carimbo, DET e emissão</b></summary>
+<br>
 
-## Regras de segurança da skill
+| Script | Função |
+|---|---|
+| `06_anotar_planta.cs` | Identificadores, cotas de nível e cotas externas (3 linhas por face) |
+| `06_cotar_pranchas.cs` | Cotas por prancha: layout, tomadas, iluminação, cobertura e cortes |
+| `06_textos.cs` | Chamadas de materiais, revestimentos, forro, tomadas e bancadas |
+| `08_regioes_areas.cs` | Regiões de área construída, permeável e piscina a partir dos pisos |
+| `calcular_areas_indices.cs` | Áreas, taxas e índices a partir das regiões da implantação |
+| `09_montagens.cs` | Montagens de esquadrias, bancadas e especiais, com elevação, topo e 3D |
+| `09_montar_folhas_det.cs` | Folhas A3 do caderno DET a partir das montagens |
+| `10_conferencia_final.cs` | Numeração, folhas vazias, carimbo, tabelas e área útil |
+| `11_emitir.cs` | PDF por caderno (opcional: por folha e DWG) e registro EMISSAO.txt |
+</details>
 
-- Nunca trabalha no template master nem em projeto de outra pessoa; projetos nascem de uma cópia local do master.
-- Não abre, cria nem salva arquivos Revit grandes pela rede (trava o Revit).
-- Nada é salvo sem confirmação; toda alteração fica em transação nomeada "Skill: …" (desfazível).
+## ✦ Segurança
 
-## Parâmetros compartilhados
+- Nunca trabalha no **template master** nem em projeto de outra pessoa.
+- Não abre, cria nem salva arquivos Revit grandes **pela rede**.
+- **Nada é salvo sem confirmação.** Toda alteração fica numa transação "Skill: …", desfazível com Ctrl+Z.
+- **Não modela:** problemas do modelo vão para o relatório, e a equipe corrige.
+- Avisos do Revit são tratados dentro das rotinas, para não abrir janelas que travam a conversa.
 
-`pasta-base-modelo/_config/PARAMETROS_COMPARTILHADOS_SKILL.txt` — 22 parâmetros com GUIDs fixos (carimbo, áreas e AMBIENTE). Lista em `skill/references/parametros.md`.
+## ✦ Configuração
+
+| Arquivo | Conteúdo |
+|---|---|
+| `skill/config/escritorio.json` | Nome, prefixo, responsáveis, carimbos e caminhos do escritório |
+| `pasta-base-modelo/_config/PARAMETROS_COMPARTILHADOS_SKILL.txt` | 22 parâmetros compartilhados com GUIDs fixos (lista em `skill/references/parametros.md`) |
+| `docs/ESPECIFICACAO.md` | Especificação completa da skill |
+
+---
+
+<p align="center">
+  <sub>Versões e novidades no <a href="CHANGELOG.md">CHANGELOG</a> · Guia para a equipe em <a href="docs/Guia_Skill_Executivo_Revit.pdf">docs/Guia_Skill_Executivo_Revit.pdf</a></sub>
+</p>
