@@ -65,3 +65,8 @@ Rode primeiro `propor`, mostre a lista ao usuário, depois `criar`.
 
 Montagens novas P03, P05, P100, J06, J07, J08, B07 → 3 folhas (portas + tabela, janelas + tabela,
 bancada), layout equivalente às folhas 02/07 e 03/07 do arquiteto.
+
+## Lições do piloto
+- Folhas DET vazias que vêm do template (1/4…4/4) são removidas e a numeração recomeça (01/03…).
+- Bancadas iguais (mesmo tipo) geram um detalhe só; bancadas diferentes precisam de tipos diferentes.
+- O script preenche CONTEÚDO DA PRANCHA com o nome da folha.

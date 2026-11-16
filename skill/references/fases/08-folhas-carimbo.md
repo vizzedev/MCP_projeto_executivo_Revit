@@ -31,3 +31,11 @@ Validado no projeto de referência: bate com o PDF emitido.
 - Logotipo do escritório no carimbo (família do carimbo — a API não edita rótulos).
 - Hachura "<prefixo>Hachura Cruzada 45" e região "<prefixo>Lote do Projeto" (a fase 5 cria se faltar;
   convém levar ao template master).
+
+## Regiões de área automáticas (`scripts/08_regioes_areas.cs`)
+Num projeto novo não há regiões de área desenhadas. O script cria, na implantação:
+- área construída de cada pavimento = contorno dos pisos internos do nível "PAV. X N.A";
+- área permeável = pisos de grama/jardim/concregrama/seixo; piscina = pisos de piscina/prainha.
+Rode sem `criar` para ver a proposta; o relatório avisa regiões que já existem na vista (no template havia 2 de outro lote,
+que somavam 106 m² a mais). `substituir` apaga todas as regiões de área da vista antes. Depois rode `calcular_areas_indices.cs`.
+Piloto: 40,90 m² construídos, 59,10 m² permeáveis em lote de 100 m² → TO 40,90 %, TP 59,10 %, IA 0,41.

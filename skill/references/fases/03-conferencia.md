@@ -18,7 +18,9 @@ A coluna ID das tabelas de portas e janelas é a **marca de tipo** (P01, J01…)
 Apresente o relatório em linguagem simples: primeiro os bloqueios, depois o que corrigir, depois a atenção.
 Para cada bloqueio, diga o que fazer (ex.: "crie o ambiente CALÇADA na faixa da frente").
 
-## 3. Corrigir — `scripts/03_corrigir_modelo.cs` (só com confirmação)
+## 3. Corrigir — `scripts/03_corrigir_modelo.cs` (só se a equipe pedir)
+Por padrão a skill **não corrige a modelagem**: entrega o relatório e a equipe corrige no modelo. Use este script só quando
+a equipe pedir explicitamente.
 Correções seguras, numa transação só (Ctrl+Z desfaz), sem salvar:
 - `ambientes_nao_colocados` — apaga ambientes sem localização.
 - `paredes_curtas` — apaga paredes com menos de 5 cm que não hospedam portas/janelas.
@@ -31,3 +33,8 @@ Sem bloqueios → grave em `<projeto>.skill.json` a fase 3 como concluída e sig
 
 Teste no projeto de referência: nenhum bloqueio; 411 ambientes não colocados apagados (sobra de lista); 34 avisos do Revit
 agrupados em 8 tipos; vínculo de interiores descarregado apontado.
+
+## Lições do piloto
+- Marcas de tipo fora do padrão (ex.: "40", "J24") aparecem como ATENÇÃO. `03_corrigir_modelo.cs` com `renumerar_esquadrias`
+  renumera P01, P02… e J01, J02… (da maior largura para a menor; só tipos usados no modelo).
+- O template master trazia 2 linhas de propriedade e 2 regiões de área de um lote de exemplo — confira e apague no início do projeto.

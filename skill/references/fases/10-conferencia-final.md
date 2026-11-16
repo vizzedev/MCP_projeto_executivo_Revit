@@ -18,3 +18,6 @@ Cadernos são separados pelo carimbo: PROPOSTA ("Proposta"), ARQ ("Executivo Arq
 
 Teste no projeto de referência: caderno ARQ 1/7 a 7/7 e proposta 1/1 sem bloqueios; apontou ETAPA DO PROJETO vazia
 e uma vista de teste fora de folha.
+
+## Lições do piloto
+- Vistas de pavimentos sem ambientes (ex.: superior numa casa térrea) não entram no aviso de "vistas fora de folha".

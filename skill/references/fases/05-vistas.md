@@ -84,3 +84,24 @@ Ordem completa da fase 5: plantas → situação → cortes (aprovação) → fa
 folhas 1/7, 2/7, 3/7, 4/7, 5/7, 6/7, 7/7 → exportar imagens e conferir antes de mostrar ao arquiteto.
 
 Fora do escopo automático (fica com o arquiteto): cotas, identificadores de material e hachura de terreno nos cortes.
+
+## Lições do piloto (casa 10 × 10 m modelada do zero)
+- `05_propor_cortes.cs`: o corte da área molhada passa pelo centro do banheiro principal (não pela média de todas as áreas molhadas)
+  e é afastado 50 cm de qualquer parede paralela a menos de 35 cm.
+- `05_plantas.cs`: a implantação é conferida por linhas de divisa/lote (o modelo de vista esconde telhados); vazia → `02_desenhar_lote.cs`.
+- `05_montar_folhas_gerais.cs`: abaixo do primeiro bloco, legenda só vai à direita se não chegar ao carimbo.
+- Plantas do template sem recorte pegam os marcadores de fachada (3 m fora da casa) e ficam maiores na folha; em casas pequenas
+  sobra espaço à direita — ajuste manual se quiser.
+
+## Duas colunas (casa pequena)
+`05_montar_folhas_gerais.cs` coloca os dois blocos da folha lado a lado (cada coluna = vista + legendas 22 mm abaixo)
+quando: cabem na largura útil (até 832 mm), cada coluna cabe acima das tabelas, a coluna da direita não desce à faixa
+do carimbo e o empilhado ficaria apertado ou as vistas são estreitas (< 420 mm). Piloto: 1/7, 2/7 e 5/7 em duas colunas.
+`parameters[4] = "empilhar"` mantém o empilhado.
+
+## Vários pavimentos
+- `05_plantas.cs` já cria executivo, tomadas, iluminação, forro e paginação para cada "PAV. X N.A" com ambientes.
+- `05_propor_cortes.cs`: passe o nível vazio (`""`) para considerar os ambientes de todos os pavimentos.
+- Pranchas: siga o plano do caderno em `references/gabarito-folhas.md` (um pavimento por folha; dois se couber, decidido com
+  `"testar"`), e numere i/N pela quantidade final de folhas.
+- `05_montar_folhas_ambientes.cs` (6/7 e 7/7) usa só as vistas do pavimento da planta geral informada: rode uma vez por pavimento.

@@ -76,10 +76,12 @@ foreach (var kv in cadernos) {
     }
 }
 // --- vistas do caderno fora de folha
+var comAmbientes = new HashSet<ElementId>(new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().Cast<Autodesk.Revit.DB.Architecture.Room>().Where(r => r.Area > 0).Select(r => r.LevelId));
+Func<View, bool> PavSemAmbientes = v => { var pv = v as ViewPlan; if (pv == null || pv.GenLevel == null) return false; var nn = pv.GenLevel.Name.ToUpper(); return nn.StartsWith("PAV.") && !comAmbientes.Contains(pv.GenLevel.Id); };   // pavimento que o projeto não usa (ex.: superior numa casa térrea)
 var palavras = new[] { "CORTE", "FACHADA", "EXECUTIVO", "PERSPECTIVA", "PAGINAÇÃO", "ILUMINAÇÃO", "TOMADA", "FORRO", "COBERTURA", "IMPLANTA", "SITUAÇÃO", "LAYOUT" };
 var foraDeFolha = new FilteredElementCollector(document).OfClass(typeof(View)).Cast<View>()
     .Where(v => !v.IsTemplate && !(v is ViewSheet) && !(v is ViewSchedule) && v.ViewType != ViewType.Legend && v.ViewType != ViewType.ProjectBrowser && v.ViewType != ViewType.SystemBrowser && v.ViewType != ViewType.Internal
-        && v.Name.StartsWith(prefixo) && palavras.Any(p => v.Name.ToUpper().Contains(p)) && !v.Name.ToUpper().Contains("TRABALHO") && !vistasEmFolha.Contains(v.Id)).Select(v => v.Name).OrderBy(n => n).ToList();
+        && v.Name.StartsWith(prefixo) && palavras.Any(p => v.Name.ToUpper().Contains(p)) && !v.Name.ToUpper().Contains("TRABALHO") && !vistasEmFolha.Contains(v.Id) && !PavSemAmbientes(v)).Select(v => v.Name).OrderBy(n => n).ToList();
 if (foraDeFolha.Count > 0) atencao.Add("Vistas do caderno que não estão em nenhuma folha (" + foraDeFolha.Count + "): " + string.Join("; ", foraDeFolha.Take(12)) + (foraDeFolha.Count > 12 ? "; …" : ""));
 var avisos = document.GetWarnings().Count; if (avisos > 0) atencao.Add("Avisos do Revit: " + avisos + " (detalhes na conferência do modelo, fase 3).");
 

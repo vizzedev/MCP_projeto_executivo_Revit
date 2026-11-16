@@ -14,6 +14,9 @@
 // 7/7: planta geral no topo com a legenda à direita; embaixo, uma linha por conjunto de paginação
 //      (planta ampliada "PAGINAÇÃO DE PISO X" → isométricas "... X 01/02" → paredes "X 01..04").
 // Tudo empilhado pela altura real das vistas, com espaço para os títulos; a linha que passar da largura quebra.
+// Vários pavimentos: uma folha por pavimento (6/7 e 7/7 de cada um). Entram só as vistas do pavimento da planta geral
+// (elevações de iluminação pela altura do recorte; plantas de paginação pelo nível). O número da folha é livre (o plano
+// do caderno numera i/N); o nome vira "PRANCHA <i>" e o conteúdo ganha " - PAVIMENTO X" quando o modelo tem mais de um.
 // Ao final confere área útil (moldura x 25–832, y 10–584, menos o carimbo x > 656 e y < 297) e sobreposições.
 var gab = parameters[0] as string;
 var numero = parameters[1] as string;
@@ -32,14 +35,29 @@ var comTitulo = tiposVp.FirstOrDefault(t => t.Name == "Title w Line"); var semTi
 var carimbo = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_TitleBlocks).OfClass(typeof(FamilySymbol)).Cast<FamilySymbol>().FirstOrDefault(f => f.FamilyName.Contains("Executivo Arquitetônico"));
 if (carimbo == null) return "ERRO: carimbo Executivo Arquitetônico não encontrado";
 var molhados = new[] { "WC", "BANHEIRO", "LAVABO", "LAVATÓRIO", "LAVATORIO", "BANHO" };
+// pavimento da planta geral: faixa de altura [nível, próximo nível com ambientes)
+var plantaGeral = vistas.FirstOrDefault(v => v.Name == nomePlanta) as ViewPlan;
+var nivelPav = plantaGeral != null ? plantaGeral.GenLevel : null;
+var roomsA = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().Cast<Autodesk.Revit.DB.Architecture.Room>().Where(r => r.Area > 0 && r.Level != null).ToList();
+var elevPavs = roomsA.Select(r => r.Level.Elevation).Distinct().OrderBy(z => z).ToList();
+bool variosPav = elevPavs.Count > 1;
+double zPav0 = nivelPav != null ? nivelPav.Elevation : double.MinValue;
+double zPav1 = nivelPav != null && elevPavs.Any(z => z > zPav0 + 1.0 / 0.3048) ? elevPavs.First(z => z > zPav0 + 1.0 / 0.3048) : double.MaxValue;
+Func<View, bool> DoPav = v => {
+    if (nivelPav == null || !variosPav) return true;
+    var vpl = v as ViewPlan; if (vpl != null) return vpl.GenLevel != null && vpl.GenLevel.Id == nivelPav.Id;
+    try { var cb = v.CropBox; var c = cb.Transform.OfPoint((cb.Min + cb.Max) / 2); return c.Z >= zPav0 - 0.5 / 0.3048 && c.Z < zPav1 - 0.5 / 0.3048; } catch { return true; }
+};
+string sufixoPav = variosPav && nivelPav != null ? " - PAVIMENTO " + nivelPav.Name.ToUpper().Replace("PAV.", "").Replace("N.A", "").Trim() : "";
+var mNum = System.Text.RegularExpressions.Regex.Match(numero ?? "", @"(\d+)\s*/");
 
 using (var t = new Transaction(document, "Skill: montar folha " + numero)) {
     t.Start();
     var folha = new FilteredElementCollector(document).OfClass(typeof(ViewSheet)).Cast<ViewSheet>().FirstOrDefault(s => s.SheetNumber == numero);
-    if (folha == null) { folha = ViewSheet.Create(document, carimbo.Id); folha.SheetNumber = numero; folha.Name = gab == "6/7" ? "PRANCHA 06" : "PRANCHA 07"; log.AppendLine("Folha criada: " + numero); }
+    if (folha == null) { folha = ViewSheet.Create(document, carimbo.Id); folha.SheetNumber = numero; folha.Name = mNum.Success ? "PRANCHA " + mNum.Groups[1].Value.PadLeft(2, '0') : (gab == "6/7" ? "PRANCHA 06" : "PRANCHA 07"); log.AppendLine("Folha criada: " + numero); }
     else log.AppendLine("Folha existente usada: " + numero);
     var pc = folha.LookupParameter("CONTEÚDO DA PRANCHA");
-    if (pc != null && !pc.IsReadOnly && string.IsNullOrEmpty(pc.AsString())) pc.Set(gab == "6/7" ? "PLANTA DE FORRO E VISTAS DE ILUMINAÇÃO" : "PAGINAÇÃO DE PISO");
+    if (pc != null && !pc.IsReadOnly && string.IsNullOrEmpty(pc.AsString())) pc.Set((gab == "6/7" ? "PLANTA DE FORRO E VISTAS DE ILUMINAÇÃO" : "PAGINAÇÃO DE PISO") + sufixoPav);
     var tb = new FilteredElementCollector(document, folha.Id).OfCategory(BuiltInCategory.OST_TitleBlocks).FirstElement() as FamilyInstance;
     var o = tb != null ? tb.GetTransform().Origin : XYZ.Zero;
     var colocados = new List<Viewport>();
@@ -72,7 +90,7 @@ using (var t = new Transaction(document, "Skill: montar folha " + numero)) {
 
     if (gab == "6/7") {
         var ilum = vistas.OfType<ViewSection>().Where(v => v.ViewType == ViewType.Elevation && v.Name.StartsWith(prefixo) && !emFolha.Contains(v.Id)
-            && v.ViewTemplateId != ElementId.InvalidElementId && document.GetElement(v.ViewTemplateId).Name == pm + "ELEVAÇÃO ILUMINAÇÃO").OrderBy(v => v.Name).ToList();
+            && v.ViewTemplateId != ElementId.InvalidElementId && document.GetElement(v.ViewTemplateId).Name == pm + "ELEVAÇÃO ILUMINAÇÃO" && DoPav(v)).OrderBy(v => v.Name).ToList();
         if (ilum.Count == 0) log.AppendLine("  nenhuma vista de iluminação livre com prefixo '" + prefixo + "'");
         var secos = ilum.Where(v => !molhados.Any(m => v.Name.ToUpper().Contains(m))).Select(v => Colocar(v, comTitulo)).Where(x => x != null).ToList();
         var molh = ilum.Where(v => molhados.Any(m => v.Name.ToUpper().Contains(m))).OrderBy(v => v.Name.ToUpper().Contains("LAVAT") ? 0 : 1).ThenBy(v => v.Name).Select(v => Colocar(v, comTitulo)).Where(x => x != null).ToList();
@@ -102,7 +120,7 @@ using (var t = new Transaction(document, "Skill: montar folha " + numero)) {
         }
         else if (vpL != null) { PosCantoSup(vpL, 832 - W(vpL), topo); }
         // conjuntos de paginação: plantas ampliadas "PAGINAÇÃO DE PISO X" (com prefixo, livres, não a geral)
-        var amps = vistas.OfType<ViewPlan>().Where(v => v.ViewType == ViewType.FloorPlan && v.Name.StartsWith(prefixo + "PAGINAÇÃO DE PISO ") && v.Name != nomePlanta && !emFolha.Contains(v.Id)).OrderBy(v => v.Name).ToList();
+        var amps = vistas.OfType<ViewPlan>().Where(v => v.ViewType == ViewType.FloorPlan && v.Name.StartsWith(prefixo + "PAGINAÇÃO DE PISO ") && v.Name != nomePlanta && !emFolha.Contains(v.Id) && DoPav(v)).OrderBy(v => v.Name).ToList();
         if (amps.Count == 0) log.AppendLine("  nenhum conjunto de paginação livre com prefixo '" + prefixo + "'");
         var linhas = new List<List<Viewport>>();
         foreach (var amp in amps) {

@@ -32,7 +32,7 @@ foreach (var nv in niveis.Where(l => l.Name.ToUpper().StartsWith("PAV.") && l.Na
 var nCob = niveis.FirstOrDefault(l => l.Name.ToUpper().Contains("COBERTURA"));
 if (nCob != null) specs.Add(Tuple.Create("COBERTURA EXECUTIVO", ViewFamily.FloorPlan, "COBERTURA", pm + "PLANTA BAIXA COBERTURA", nCob, 75, BuiltInCategory.OST_Roofs));
 else log.AppendLine("⚠ Sem nível COBERTURA — planta de cobertura não criada.");
-specs.Add(Tuple.Create("IMPLANTAÇÃO", ViewFamily.FloorPlan, "IMPLANTAÇÃO", pm + "PLANTA BAIXA IMPLANTAÇÃO", niveis.Last(), 100, BuiltInCategory.OST_Roofs));   // o modelo da implantação oculta paredes: confere telhados
+specs.Add(Tuple.Create("IMPLANTAÇÃO", ViewFamily.FloorPlan, "IMPLANTAÇÃO", pm + "PLANTA BAIXA IMPLANTAÇÃO", niveis.Last(), 100, BuiltInCategory.OST_SiteProperty));
 
 using (var t = new Transaction(document, "Skill: plantas do caderno")) {
     t.Start();
@@ -54,8 +54,9 @@ using (var t = new Transaction(document, "Skill: plantas do caderno")) {
         }
         document.Regenerate();
         int qtd = new FilteredElementCollector(document, v.Id).OfCategory(s.Item7).WhereElementIsNotElementType().GetElementCount();
-        string conteudo = s.Item7 == BuiltInCategory.OST_ElectricalFixtures ? "tomadas/pontos" : s.Item7 == BuiltInCategory.OST_LightingFixtures ? "luminárias" : s.Item7 == BuiltInCategory.OST_Ceilings ? "forros" : s.Item7 == BuiltInCategory.OST_Floors ? "pisos" : s.Item7 == BuiltInCategory.OST_Roofs ? "telhados" : "paredes";
-        log.AppendLine((qtd == 0 ? "⚠ " : "") + nome + " — " + acao + " | 1:" + v.Scale + " | " + qtd + " " + conteudo + (qtd == 0 ? " → VAZIA: modelar antes de emitir" : ""));
+        if (s.Item7 == BuiltInCategory.OST_SiteProperty) qtd += new FilteredElementCollector(document, v.Id).OfCategory(BuiltInCategory.OST_Lines).WhereElementIsNotElementType().GetElementCount();
+        string conteudo = s.Item7 == BuiltInCategory.OST_ElectricalFixtures ? "tomadas/pontos" : s.Item7 == BuiltInCategory.OST_LightingFixtures ? "luminárias" : s.Item7 == BuiltInCategory.OST_Ceilings ? "forros" : s.Item7 == BuiltInCategory.OST_Floors ? "pisos" : s.Item7 == BuiltInCategory.OST_Roofs ? "telhados" : s.Item7 == BuiltInCategory.OST_SiteProperty ? "linhas de divisa/lote" : "paredes";
+        log.AppendLine((qtd == 0 ? "⚠ " : "") + nome + " — " + acao + " | 1:" + v.Scale + " | " + qtd + " " + conteudo + (qtd == 0 ? (s.Item7 == BuiltInCategory.OST_SiteProperty ? " → VAZIA: rode 02_desenhar_lote.cs" : " → VAZIA: modelar antes de emitir") : ""));
     }
     t.Commit();
 }

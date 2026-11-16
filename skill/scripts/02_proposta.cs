@@ -50,6 +50,7 @@ using (var t = new Transaction(document, "Skill: proposta de layout")) {
         var folha = new FilteredElementCollector(document).OfClass(typeof(ViewSheet)).Cast<ViewSheet>().FirstOrDefault(s => s.SheetNumber == numero);
         if (folha == null) { folha = ViewSheet.Create(document, carimbo.Id); folha.SheetNumber = numero; folha.Name = "PRANCHA " + (i + 1).ToString("00"); log.AppendLine("Folha criada: " + numero); }
         else log.AppendLine("Folha " + numero);
+        var pcont = folha.LookupParameter("CONTEÚDO DA PRANCHA"); if (pcont != null && !pcont.IsReadOnly && string.IsNullOrEmpty(pcont.AsString())) pcont.Set("PROPOSTA DE LAYOUT - PAV. " + pav + (i == 0 ? " E IMPLANTAÇÃO" : ""));
         var tb = new FilteredElementCollector(document, folha.Id).OfCategory(BuiltInCategory.OST_TitleBlocks).FirstElement() as FamilyInstance;
         var o = tb != null ? tb.GetTransform().Origin : XYZ.Zero;
         Action<Viewport, double, double> Pos = (vp, xEsq, yTopo) => vp.SetBoxCenter(new XYZ(o.X + MM(xEsq + W(vp) / 2), o.Y + MM(yTopo - H(vp) / 2), 0));

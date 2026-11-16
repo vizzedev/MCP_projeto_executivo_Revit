@@ -5,7 +5,8 @@
 // AMBIENTE das portas/janelas (vai para a coluna AMBIENTE das tabelas, que agrupam por marca de tipo):
 //   para cada tipo, junta os ambientes onde ele está instalado e escreve um texto único para todas as instâncias do tipo,
 //   ex.: "LAVANDERIA, CIRCULAÇÃO E QUARTOS". Regras (extraídas do projeto de referência):
-//   - porta: vale o ambiente que não é circulação nem área externa; se dá para fora, "<ambiente>/ÁREA EXTERNA";
+//   - porta: vale o ambiente que não é circulação nem área externa; entre dois ambientes internos, o mais reservado
+//     (banheiro > quarto > serviço > cozinha > demais); se dá para fora, "<ambiente>/ÁREA EXTERNA";
 //   - janela: vale o ambiente interno; sem ambiente (pavimento sem ambientes) → "FACHADA <LADO>[ - <PAVIMENTO>]";
 //   - agrupamento: 2+ quartos/suítes/apartamentos → "QUARTOS"; 2+ banheiros/WCs/lavabos → "WC's"; CIRC… → "CIRCULAÇÃO".
 //   Parâmetro procurado: o primeiro parâmetro de texto de instância cujo nome contém "AMBIENTE" e que esteja em uso nas tabelas
@@ -68,7 +69,8 @@ Func<FamilyInstance, bool, string> AmbienteDe = (fi, porta) => {
     var internos = lados.Where(n => !Ext(n)).ToList(); var externosL = lados.Where(n => Ext(n)).ToList();
     if (!porta) return internos.Count > 0 ? internos[0] : lados[0];
     var util = internos.Where(n => !Circ(n)).ToList();
-    var dentro = util.Count > 0 ? util[0] : internos.Count > 0 ? internos[0] : lados[0];
+    Func<string, int> Pri = n => Grupo(n) == "WC" ? 0 : Grupo(n) == "QUARTO" ? 1 : new[] { "LAVANDERIA", "SERVIÇO", "SERVICO", "DEPÓSITO", "DEPOSITO", "DESPENSA" }.Any(k => n.Contains(k)) ? 2 : new[] { "COZINHA", "GOURMET" }.Any(k => n.Contains(k)) ? 3 : 4;
+    var dentro = util.Count > 0 ? util.OrderBy(Pri).First() : internos.Count > 0 ? internos[0] : lados[0];
     // porta que dá para fora: "<ambiente>/ÁREA EXTERNA", como o arquiteto escreve ("QUARTOS/ÁREA EXTERNA")
     if (internos.Count > 0 && externosL.Count > 0) return dentro + "/ÁREA EXTERNA";
     return dentro;

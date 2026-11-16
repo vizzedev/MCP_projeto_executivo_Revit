@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.6.0 — 16/11/2026
+- **Escopo:** a equipe modela (inclusive o layout); a skill faz só o detalhamento técnico executivo. Na planta de layout ela
+  anota (nomes, cotas em texto, acabamentos) e diagrama. A conferência do modelo só relata; correções só a pedido da equipe.
+- **Vários pavimentos:**
+  - `06_anotar_planta.cs`: cotas externas em todos os pavimentos pela regra do lote (divisas do térreo); muro identificado
+    por não delimitar ambiente interno (ou tipo "MURO"), não só pela altura; aviso quando as divisas não aparecem no superior.
+  - `06_cotar_pranchas.cs` (corte): cadeia de cada ambiente até a laje logo acima; linha à esquerda com o piso de cada pavimento + topo.
+  - `05_montar_folhas_gerais.cs`: vários pavimentos por folha (`"TERREO;SUPERIOR"`), modo `"testar"` (COUBE/NAO_COUBE, sem
+    gravar), implantação e tabelas só na folha do térreo, nome "PRANCHA <i>" pelo número, conteúdo com o pavimento.
+  - `05_montar_folhas_ambientes.cs`: só as vistas do pavimento da planta geral; nome e conteúdo por pavimento.
+  - `05_propor_cortes.cs`: nível vazio = ambientes de todos os pavimentos.
+  - Plano do caderno para sobrados em `references/gabarito-folhas.md` (um pavimento por folha; dois se couber; numeração i/N).
+- Escada fora do escopo de detalhamento.
+
+## 0.5.0 — 15/11/2026
+Cotas e textos no padrão do projeto de referência, folhas de casa pequena em duas colunas, limpeza do template e instalador.
+
+### Novo
+- `06_anotar_planta.cs` (cotas da planta executiva): regra do escritório — nenhuma cota dentro do lote; nas 4 faces, por fora
+  dos muros, 3 linhas: cadeia detalhada (limites de paredes e pisos, sem vãos), blocos (divisas, muros, extremos da
+  edificação) e total. Linhas a 5 mm do desenho e a cada 6,5 mm; trechos curtos com texto escalonado.
+- `06_cotar_pranchas.cs`: cotas por prancha — layout (dimensões só em texto no canto do ambiente), tomadas (parede → ponto →
+  ponto → parede), iluminação (pela fileira; luminária linear pelas pontas), cobertura (corpo × beiral + total) e cortes
+  (cadeia vertical por ambiente: piso → forro → laje + altura total).
+- `06_textos.cs`: anotações de texto a partir do modelo — PROJEÇÃO COBERTURA/EDIFICAÇÃO, telha + inclinação, chamadas de
+  telha/laje/forro nos cortes, REVEST./PISO por ambiente, materiais das fachadas, FORRO= h, tomadas fora da altura padrão,
+  louças e material das bancadas no DET.
+- `00_limpar_template.cs`: relatório e limpeza das sobras do projeto-exemplo no template master (só numa cópia).
+- `05_montar_folhas_gerais.cs`: duas colunas quando as vistas cabem lado a lado (casa pequena).
+- Instalador: `installer/instalar-skill.ps1` + `INSTALAR.cmd` (baixa a versão mais recente do GitHub, confere Revit/MCP/
+  pasta-base, grava o perfil, gera o ZIP da skill e registra a versão) e `COMPILAR_EXE.cmd` (gera o .exe com ps2exe).
+  Na primeira instalação, instala também o MCP do Revit (suplemento, Node.js e configuração do Claude Desktop) pelo
+  instalador oficial do projeto do MCP; lê a porta do servidor em `mcp-port.txt`.
+- Instalador 1.1 (`InstaladorSkillExecutivoRevit.exe`): a skill vai embutida no .exe (`montar-pacote.ps1`), todas as
+  perguntas no começo, ZIP com a pasta no nome da skill (`executivo-revit`), guia em PDF e atalhos instalados, e ao final
+  abre a pasta do ZIP e a página "Próximos passos" (o que só o usuário pode fazer no Claude e no Revit).
+- Instalador 1.2: janela no visual do guia (Poppins embutida, lateral escura, acento vermelho), assistente em 5 telas
+  (Boas-vindas, Configuração, Perfil, Instalação com progresso por etapa, Concluído com os passos manuais), ícone próprio,
+  escala para telas de alta resolução e `-Previa <pasta>` para gerar imagens das telas.
+
+### Corrigido
+- Título das bancadas no DET com o ambiente ("BANCADA B02 - COZINHA").
+- Cotas: `Dimension.Origin` lança exceção em cota de vários trechos; cotas não têm parâmetro Comentários (marcação por posição).
+
+## 0.4.0 — 14/11/2026
+Piloto num projeto novo: casa térrea 10 × 10 m criada do zero a partir do template master e levada da abertura à emissão
+(PROPOSTA 1 folha, ARQ 7 folhas A1, DET 3 folhas A3). Relatório completo em `skill/references/relatorio-piloto.md`.
+
+### Novo
+- `02_desenhar_lote.cs`: desenha lote (das linhas de propriedade ou dos muros de divisa), projeção da edificação, cotas de
+  testada/profundidade e recorte nas vistas de implantação — sem isso, num projeto sem linhas de propriedade, a implantação sai vazia.
+- `08_regioes_areas.cs`: gera as regiões de área construída, permeável e de piscina a partir dos pisos do modelo
+  (antes as áreas do carimbo só funcionavam com regiões desenhadas à mão).
+- Regra 8 do SKILL.md: bloco que apaga avisos do Revit em todo script — avisos abriam janelas modais e travavam o MCP.
+
+### Corrigido
+- Fase 3: aviso de marcas de tipo fora do padrão e opção `renumerar_esquadrias` (P01…, J01…).
+- Fase 4: porta entre ambientes internos vale o mais reservado (banheiro > quarto > serviço > cozinha).
+- Fase 5: corte da área molhada pelo banheiro principal e afastado de paredes paralelas; implantação conferida por linhas de
+  lote (não por telhados); legenda abaixo da vista quando à direita ela chegaria ao carimbo.
+- Fases 2 e 9: CONTEÚDO DA PRANCHA preenchido; fase 9 remove as folhas DET vazias do template antes de numerar.
+- Fase 10: vistas de pavimentos sem ambientes não entram no aviso de vistas fora de folha.
+
+### Pendências do template master (encontradas no piloto)
+Linhas de propriedade e regiões de área de um lote de exemplo; legenda de implantação com valores fixos; "Janela Padrão" de 2,50 m;
+marcas de porta fora do padrão; famílias de porta sem ABERTURA/MATERIAL; arquivo de ~200 MB a expurgar.
+
 ## 0.3.0 — 14/11/2026
 Todas as fases com rotina e documentação, testadas numa cópia do projeto de referência e conferidas por imagem
 contra as folhas emitidas pelo arquiteto.

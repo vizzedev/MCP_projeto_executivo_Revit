@@ -12,6 +12,7 @@
 //   - Se um bloco não cabe na largura útil, a escala das vistas dele dobra (1:25 -> 1:50).
 // A vista de topo é girada 90° na folha quando a peça corre na vertical dela, para alinhar com a elevação.
 // Vistas de montagem nascem sem recorte; o script liga o recorte ajustado à peça (+0,15 m) e o esconde.
+// Folhas DET vazias (sem vistas nem tabelas) com o mesmo carimbo são removidas antes — vêm do template.
 // Numeração: <prefixo>i/N (dois dígitos) contando as folhas DET existentes com o mesmo prefixo.
 // Uma transação "Skill: folhas DET". Não salva.
 Func<int, string> P = i => parameters.Length > i ? ((parameters[i] as string) ?? "").Trim() : "";
@@ -41,17 +42,25 @@ var vpTipo = new FilteredElementCollector(document).OfClass(typeof(Viewport)).Ca
 Action<Viewport> SemTitulo = vp => { if (vpTipo != ElementId.InvalidElementId) try { vp.ChangeTypeId(vpTipo); } catch { } };
 var modelo = new FilteredElementCollector(document).OfClass(typeof(ViewSheet)).Cast<ViewSheet>().FirstOrDefault(s => new FilteredElementCollector(document, s.Id).OfCategory(BuiltInCategory.OST_TitleBlocks).Cast<FamilyInstance>().Any(x => x.Symbol.Id == tb.Id));
 var tipoTexto = new FilteredElementCollector(document).OfClass(typeof(TextNoteType)).FirstElementId();
+var valoresModelo = new Dictionary<string, string>();   // campos do carimbo copiados de uma folha DET existente (lidos antes de remover as vazias)
+if (modelo != null) foreach (Parameter p in modelo.Parameters)
+    if (!p.IsReadOnly && p.StorageType == StorageType.String && p.Id.Value != (long)BuiltInParameter.SHEET_NUMBER && p.Id.Value != (long)BuiltInParameter.SHEET_NAME && !string.IsNullOrEmpty(p.AsString()) && !valoresModelo.ContainsKey(p.Definition.Name)) valoresModelo[p.Definition.Name] = p.AsString();
 var rot = new Dictionary<ElementId, ViewportRotation>();
 var folhasNovas = new List<ViewSheet>(); var cab = new System.Text.StringBuilder();
 double x0 = 0, x1 = 0, y0 = 0, y1 = 0;
 using (var t = new Transaction(document, "Skill: folhas DET")) {
     t.Start();
+    // folhas DET vazias que vieram do template (mesmo carimbo, sem vistas nem tabelas) são removidas — a skill numera as suas
+    var vazias = new FilteredElementCollector(document).OfClass(typeof(ViewSheet)).Cast<ViewSheet>().Where(s => s.SheetNumber.StartsWith(prefixo)
+        && new FilteredElementCollector(document, s.Id).OfCategory(BuiltInCategory.OST_TitleBlocks).Cast<FamilyInstance>().Any(x => x.Symbol.Id == tb.Id)
+        && new FilteredElementCollector(document, s.Id).OfClass(typeof(Viewport)).GetElementCount() == 0
+        && !new FilteredElementCollector(document, s.Id).OfClass(typeof(ScheduleSheetInstance)).Cast<ScheduleSheetInstance>().Any(x => !x.IsTitleblockRevisionSchedule)).ToList();
+    if (vazias.Count > 0) { log.AppendLine("Folhas DET vazias do template removidas: " + string.Join(", ", vazias.Select(s => s.SheetNumber))); document.Delete(vazias.Select(v => v.Id).ToList()); }
     Func<string, ViewSheet> NovaFolha = nome => {
         var s = ViewSheet.Create(document, tb.Id); s.Name = nome; folhasNovas.Add(s);
-        if (modelo != null) foreach (Parameter p in modelo.Parameters) {
-            if (p.IsReadOnly || p.StorageType != StorageType.String || p.Id.Value == (long)BuiltInParameter.SHEET_NUMBER || p.Id.Value == (long)BuiltInParameter.SHEET_NAME) continue;
-            var d = s.get_Parameter(p.Definition); if (d != null && !d.IsReadOnly && !string.IsNullOrEmpty(p.AsString())) try { d.Set(p.AsString()); } catch { }
-        } else { var pv = s.LookupParameter("VISTAS"); if (pv != null && !pv.IsReadOnly) pv.Set("DETALHAMENTO"); }
+        var pcont = s.LookupParameter("CONTEÚDO DA PRANCHA"); if (pcont != null && !pcont.IsReadOnly) pcont.Set(nome);
+        foreach (var kv in valoresModelo) { var d = s.LookupParameter(kv.Key); if (d != null && !d.IsReadOnly && d.StorageType == StorageType.String) try { d.Set(kv.Value); } catch { } }
+        if (valoresModelo.Count == 0) { var pv = s.LookupParameter("VISTAS"); if (pv != null && !pv.IsReadOnly) pv.Set("DETALHAMENTO"); }
         document.Regenerate();
         var ti = new FilteredElementCollector(document, s.Id).OfCategory(BuiltInCategory.OST_TitleBlocks).FirstElement();
         var bb = ti.get_BoundingBox(s); x0 = bb.Min.X + M(18); x1 = bb.Max.X - M(57); y0 = bb.Min.Y + M(13); y1 = bb.Max.Y - M(9);
@@ -109,7 +118,7 @@ using (var t = new Transaction(document, "Skill: folhas DET")) {
             double colX = esq ? cx : cx + med[2] + (v3 != null ? M(6) : 0), colW = Math.Max(med[3], med[4]), yCol = esq ? topoLinha : topoLinha - M(7);
             if (!esq) {
                 var titulo = (u.Item1 == "bancadas" ? "BANCADA " : "") + u.Item2.AssemblyTypeName;
-                var bbE = u.Item2.get_BoundingBox(null); if (bbE != null) { var room = document.GetRoomAtPoint((bbE.Min + bbE.Max) / 2); if (room != null) titulo += " - " + room.get_Parameter(BuiltInParameter.ROOM_NAME).AsString(); }
+                var principalE = u.Item2.GetMemberIds().Select(i => document.GetElement(i)).FirstOrDefault(e => e.Category != null && e.Category.Id.Value != (long)BuiltInCategory.OST_PlumbingFixtures) ?? document.GetElement(u.Item2.GetMemberIds().First()); var bbE = principalE.get_BoundingBox(null); if (bbE != null) { var pE = (bbE.Min + bbE.Max) / 2; var room = document.GetRoomAtPoint(pE) ?? document.GetRoomAtPoint(new XYZ(pE.X, pE.Y, bbE.Min.Z + 0.5)); if (room != null) titulo += " - " + room.get_Parameter(BuiltInParameter.ROOM_NAME).AsString(); }
                 TextNote.Create(document, folha.Id, new XYZ(cx, topoLinha, 0), titulo, tipoTexto);
                 if (v3 != null) Colocar(folha, v3, cx, yCol);
             }

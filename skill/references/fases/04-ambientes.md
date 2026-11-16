@@ -20,3 +20,7 @@ Quando: depois da fase 3 sem bloqueios, antes de montar as folhas (fase 5) — a
    eles aparecem nas vistas por ambiente, nas tabelas e nos títulos. Corrigir o nome é com o arquiteto (afeta o projeto inteiro).
 
 Teste no projeto de referência: 1 porta vazia preenchida; nenhum valor do arquiteto alterado; inconsistência "APT 02" apontada.
+
+## Lições do piloto
+- Porta entre dois ambientes internos vale o mais reservado: banheiro > quarto > serviço > cozinha > demais
+  (antes pegava o primeiro e a porta do banheiro saía como "COZINHA").

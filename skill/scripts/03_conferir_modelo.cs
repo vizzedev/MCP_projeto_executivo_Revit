@@ -53,6 +53,8 @@ foreach (var cat in new[] { BuiltInCategory.OST_Doors, BuiltInCategory.OST_Windo
     if (semMarca.Count > 0) corrigir.Add(nomeCat + " sem marca de tipo (ficam sem ID na tabela e na planta): " + semMarca.Count + Ex(semMarca.Select(fi => fi.Symbol.FamilyName + " : " + fi.Symbol.Name + " [" + fi.Id.Value + "]").Distinct()));
     // mesma marca em tipos diferentes = códigos repetidos na tabela
     var repetidas = inst.Where(fi => Marca(fi) != "").GroupBy(Marca).Where(g => g.Select(fi => fi.Symbol.Id).Distinct().Count() > 1).ToList();
+    var foraPadrao = inst.Select(fi => fi.Symbol).GroupBy(x => x.Id).Select(g => g.First()).Where(fs => { var m = (fs.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_MARK)?.AsString() ?? "").Trim(); return m != "" && !System.Text.RegularExpressions.Regex.IsMatch(m, "^" + (cat == BuiltInCategory.OST_Doors ? "P" : "J") + @"\d{2,}$"); }).ToList();
+    if (foraPadrao.Count > 0) atencao.Add(nomeCat + " com marca fora do padrão " + (cat == BuiltInCategory.OST_Doors ? "P01, P02…" : "J01, J02…") + ": " + foraPadrao.Count + Ex(foraPadrao.Select(fs => fs.Name + " = " + fs.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_MARK).AsString())) + " — 03_corrigir_modelo.cs \"renumerar_esquadrias\" renumera.");
     if (repetidas.Count > 0) corrigir.Add(nomeCat + ": mesmo identificador em tipos diferentes: " + repetidas.Count + Ex(repetidas.Select(g => g.Key + " = " + string.Join(" / ", g.Select(fi => fi.Symbol.Name).Distinct()))));
 }
 

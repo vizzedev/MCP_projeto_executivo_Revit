@@ -2,17 +2,19 @@
 // send_code_to_revit · transactionMode "none"
 // parameters[0] = prefixo do nome das vistas ("" no uso real; "SKILL " em teste)
 // parameters[1] = nome do modelo de vista de corte (ex.: "VZ-CORTE EXECUTIVO")
-// parameters[2] = nível de referência para os ambientes (ex.: "PAV. TERREO N.A")
+// parameters[2] = nível de referência para os ambientes (ex.: "PAV. TERREO N.A"; vazio = todos os pavimentos)
 // parameters[3] = escala (padrão 75) — o modelo de vista do escritório não controla a escala
 // parameters[4] = trecho do nome do tipo de corte (padrão "CORTE EXECUTIVO"; define o marcador)
 // Regras:
 //  - Contorno da edificação = ambientes internos do nível (exclui externos: ÁREA EXTERNA, CALÇADA, PISCINA, SOLARIUM, PERGOLADO, PRAINHA, HIDRO, JARDIM, DECK, ESTACIONAMENTO, GARAGEM DESCOBERTA).
-//  - Transversais (cortam o lado maior): A pela área molhada (centro dos banheiros/lavanderia/cozinha), B pelo maior ambiente social; afastamento mínimo de 25% do comprimento.
+//  - Transversais (cortam o lado maior): A pela área molhada principal (banheiro > lavanderia > cozinha), B pelo maior ambiente social; afastamento mínimo de 25% do comprimento.
 //  - Longitudinais (cortam o lado menor): C pela área molhada, D pelo maior ambiente social (mesma regra).
+//  - Corte a menos de 35 cm de uma parede paralela é afastado 50 cm dela (senão mostra a parede em vista, não cortada).
 //  - O arquiteto confere em planta e arrasta as linhas se quiser; depois a skill segue.
 var prefixo = (parameters != null && parameters.Length > 0) ? (parameters[0] as string ?? "") : "";
 var nomeModelo = (parameters != null && parameters.Length > 1) ? parameters[1] as string : "VZ-CORTE EXECUTIVO";
 var nomeNivel = (parameters != null && parameters.Length > 2) ? parameters[2] as string : null;
+if (string.IsNullOrWhiteSpace(nomeNivel)) nomeNivel = null;   // vazio = ambientes de todos os pavimentos (casa de mais de um pavimento)
 int escala = (parameters != null && parameters.Length > 3 && !string.IsNullOrWhiteSpace(parameters[3] as string)) ? int.Parse((string)parameters[3]) : 75;
 var trechoTipo = (parameters != null && parameters.Length > 4 && !string.IsNullOrWhiteSpace(parameters[4] as string)) ? (string)parameters[4] : "CORTE EXECUTIVO";
 var log = new System.Text.StringBuilder();
@@ -36,7 +38,9 @@ var elems = new FilteredElementCollector(document).WherePasses(new LogicalOrFilt
 double zTopo = elems.Max(b => b.Max.Z) + F(0.3), zBase = new FilteredElementCollector(document).OfClass(typeof(Level)).Cast<Level>().Min(l => l.Elevation) - F(0.3);
 
 Func<IEnumerable<Autodesk.Revit.DB.Architecture.Room>, XYZ> Centro = rs => { var l = rs.ToList(); if (l.Count == 0) return null; return new XYZ(l.Average(r => ((LocationPoint)r.Location).Point.X), l.Average(r => ((LocationPoint)r.Location).Point.Y), 0); };
-var cMolhado = Centro(internos.Where(r => molhados.Any(w => Nome(r).Contains(w))));
+Func<Autodesk.Revit.DB.Architecture.Room, int> PriM = r => { var n = Nome(r); return (n.Contains("WC") || n.Contains("BANHEIRO") || n.Contains("LAVABO")) ? 0 : (n.Contains("LAVANDERIA") || n.Contains("SERVIÇO")) ? 1 : 2; };
+var molhadoPrinc = internos.Where(r => molhados.Any(w => Nome(r).Contains(w))).OrderBy(PriM).ThenByDescending(r => r.Area).FirstOrDefault();
+var cMolhado = molhadoPrinc != null ? Centro(new[] { molhadoPrinc }) : null;
 var maiorSocial = internos.Where(r => sociais.Any(s => Nome(r).Contains(s))).OrderByDescending(r => r.Area).FirstOrDefault() ?? internos.OrderByDescending(r => r.Area).First();
 var cSocial = ((LocationPoint)maiorSocial.Location).Point;
 log.AppendLine("Área molhada: " + (cMolhado != null ? "(" + M(cMolhado.X).ToString("0.0") + ", " + M(cMolhado.Y).ToString("0.0") + ") m" : "não encontrada") + " | maior social: " + Nome(maiorSocial));
@@ -50,8 +54,18 @@ Func<double,double,double,double,double[]> Duas = (a, b, lo, hi) => {
     return new[]{ a, b };
 };
 double mx = cMolhado != null ? cMolhado.X : double.NaN, my = cMolhado != null ? cMolhado.Y : double.NaN;
+var paredesInt = new FilteredElementCollector(document).OfClass(typeof(Wall)).Cast<Wall>().Where(w => w.Location is LocationCurve && ((LocationCurve)w.Location).Curve is Line).Select(w => (Line)((LocationCurve)w.Location).Curve).ToList();
+Func<double, bool, double> Afastar = (pos, emX) => {
+    foreach (var ln in paredesInt) {
+        var d = ln.Direction; bool paralela = emX ? Math.Abs(d.X) < 0.05 : Math.Abs(d.Y) < 0.05; if (!paralela) continue;
+        double c = emX ? ln.GetEndPoint(0).X : ln.GetEndPoint(0).Y;
+        if (Math.Abs(pos - c) < F(0.35)) return c + Math.Sign(pos - c == 0 ? 1 : pos - c) * F(0.5);
+    }
+    return pos;
+};
 var posLongo = xLongo ? Duas(mx, cSocial.X, x0, x1) : Duas(my, cSocial.Y, y0, y1);   // transversais A, B
-var posCurto = xLongo ? Duas(my, cSocial.Y, y0, y1) : Duas(mx, cSocial.X, x0, x1);   // longitudinais C, D
+var posCurto = xLongo ? Duas(my, cSocial.Y, y0, y1) : Duas(mx, cSocial.X, x0, x1);
+posLongo = posLongo.Select(p => Afastar(p, xLongo)).ToArray(); posCurto = posCurto.Select(p => Afastar(p, !xLongo)).ToArray();   // longitudinais C, D
 
 var tiposCorte = new FilteredElementCollector(document).OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>().Where(t => t.ViewFamily == ViewFamily.Section).ToList();
 var tipoCorte = tiposCorte.FirstOrDefault(t => t.Name.ToUpper().Contains(trechoTipo.ToUpper())) ?? tiposCorte.First();
