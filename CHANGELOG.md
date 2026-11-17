@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.7.0 — 17/11/2026
+Aprimoramentos a partir do checklist executivo do escritório. **Regra nova:** recebida a modelagem, a skill faz o
+executivo inteiro. Elementos físicos ela propõe para aprovação, regras de projeto ela corrige com aprovação, e os dados de
+fora do modelo vêm do questionário. `skill/references/checklist-executivo.md` liga cada item ao que a skill faz.
+- **Implantação** (`06_implantacao.cs`, novo): rua, largura, pavimentação, lotes vizinhos, numeração predial, norte e
+  linhas de recuo em azul tracejado (estilo "VZ-RECUO"), na implantação e no executivo do térreo.
+- **Elementos externos** (`06_elementos_externos.cs`, novo): propõe abrigo de medidores, gás, caixa de captação, lixeira,
+  rebaixo do meio-fio, ducha e piso tátil; depois "aprovar" ou "desfazer".
+- **Correção das regras** (`03_corrigir_modelo.cs`): `peitoril`, `portas_largura` (troca de tipo na mesma família) e
+  `bancadas` (parâmetros da família; duplica o tipo compartilhado), só nos ids aprovados.
+- **QR code no carimbo** (`08_qrcode.cs`, novo): imagem gerada pela skill colocada em todas as folhas ARQ/DET.
+- **Paginação** (`06_textos.cs` modo `paginacao`): piso por ambiente, início da paginação na porta, nota de ralos e canaletas.
+- **Eixos hidrossanitários amarrados** (`06_cotar_pranchas.cs` modo `hidro`).
+- **Questionário**: asfalto, numeração predial, lote de fundos, recuos, lado da garagem, tipo de construção, link do QR code.
+- **Cotas em três escalas** (`06_anotar_planta.cs`): micro (vãos de portas e janelas da fachada), médio (ambiente por
+  ambiente) e macro (total do terreno), por fora do lote e em todas as plantas. A linha de blocos foi substituída pela micro.
+- **Conferência do modelo** (`03_conferir_modelo.cs`): regras de projeto do checklist como ATENÇÃO (peitoril 1,00 m, porta de
+  entrada ≥ 1,30 m pivotante, lavabo 0,70 m, alumínio em corredor 0,90 m, vaga 3,00 × 5,00 m, bancadas, churrasqueira, topografia).
+- **Anotação**:
+  - identificador de ambiente com perímetro (quando o template tem o tipo);
+  - paisagismo escondido fora da planta de layout;
+  - "PROJEÇÃO PERGOLADO";
+  - X tracejado nos vazios;
+  - tomadas com as alturas padrão do checklist;
+  - altura das luminárias de parede e prateleira.
+- **Plantas complementares**: ar-condicionado (BTU, modelo, distância evaporadora–condensadora), hidro e gás (chamadas com
+  altura) e iluminação externa. Vistas em `05_plantas.cs`, textos em `06_textos.cs` (modos `ar` e `hidro`) e folhas em
+  `05_montar_folhas_gerais.cs` (`ar`, `hidro`, `ilumext`). São criadas só quando há pontos modelados.
+- **Conferência final** (`10_conferencia_final.cs`): seção "CHECKLIST EXECUTIVO" com campos do carimbo, implantação, elementos,
+  legenda, paisagismo e colunas das tabelas.
+- Mudanças ainda não testadas no Revit: validar no piloto antes de usar em projeto.
+
 ## 0.6.0 — 16/11/2026
 - **Escopo:** a equipe modela (inclusive o layout); a skill faz só o detalhamento técnico executivo. Na planta de layout ela
   anota (nomes, cotas em texto, acabamentos) e diagrama. A conferência do modelo só relata; correções só a pedido da equipe.
@@ -13,6 +45,11 @@
   - `05_propor_cortes.cs`: nível vazio = ambientes de todos os pavimentos.
   - Plano do caderno para sobrados em `references/gabarito-folhas.md` (um pavimento por folha; dois se couber; numeração i/N).
 - Escada fora do escopo de detalhamento.
+- Instalador: detecta se o Claude Desktop está instalado (com link para baixar); liga o MCP ao Claude Desktop por conta
+  própria (`configurar-mcp-claude.ps1` / `CONFIGURAR_MCP_CLAUDE.cmd`: todas as pastas de configuração, UTF-8 sem BOM);
+  correção do erro de desenho da janela durante a instalação.
+- Instalador 1.3: o ZIP da skill é gravado com "/" nos caminhos (o Compress-Archive do Windows PowerShell 5.1 grava "\\" e o
+  Claude recusava com "Zip file contains path with invalid characters"); `REFAZER_ZIP_SKILL.cmd` corrige um ZIP já gerado.
 
 ## 0.5.0 — 15/11/2026
 Cotas e textos no padrão do projeto de referência, folhas de casa pequena em duas colunas, limpeza do template e instalador.

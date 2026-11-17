@@ -21,3 +21,14 @@ e uma vista de teste fora de folha.
 
 ## Lições do piloto
 - Vistas de pavimentos sem ambientes (ex.: superior numa casa térrea) não entram no aviso de "vistas fora de folha".
+
+## Checklist executivo (ATENÇÃO)
+A conferência final procura no modelo (por nome de família/tipo e pelos textos) os itens do checklist e aponta o que faltar:
+- campos do carimbo: tipo de construção, data, desenhista, ART/RRT, QR code, nomes e CPF dos clientes;
+- implantação: norte, nome e largura da rua, asfalto, lotes vizinhos e linhas no estilo "RECUO";
+- elementos: abrigo de medidores/padrão de energia, caixa de captação, lixeira, piso tátil, rebaixo do meio-fio, casa de gás
+  e ducha externa quando há piscina;
+- legenda na folha da planta executiva e paisagismo escondido nas plantas executivas;
+- colunas das tabelas: esquadrias com altura, largura, quantidade, ambiente e material; luminárias com cor.
+
+É uma busca por nome: um item com outro nome aparece como faltando. Confira na prancha antes de cobrar a equipe.

@@ -7,15 +7,20 @@ description: Faz o detalhamento técnico executivo de um projeto de arquitetura 
 
 Você conduz o detalhamento em **fases**. Em cada fase: executa a parte automática pelo MCP do Revit, mostra o resultado e **para no ponto de aprovação** do arquiteto antes de seguir. Nunca pule a aprovação.
 
-## Escopo: a equipe modela, a skill detalha
+## Escopo: a equipe modela, a skill faz o executivo inteiro
 - **A equipe entrega o modelo pronto:** paredes, portas, janelas, pisos, forros, cobertura, ambientes e o layout
   (mobiliário). Concepção e layout são da equipe.
-- **A skill faz o detalhamento técnico executivo:** vistas, cotas, nomes e identificadores, textos de acabamento,
-  tabelas, carimbo, montagem das pranchas ARQ e DET, conferência e emissão. Na planta de layout ela só anota
-  (nomes dos ambientes, cotas em texto, acabamentos) e diagrama a folha.
-- **A skill não modela nem muda o projeto:** não cria, move nem apaga paredes, portas, janelas, pisos, forros, móveis
-  ou telhados. Problemas de modelagem (ambiente sem nome, piso sem material, marca repetida…) vão para o relatório da
-  fase 3, e a equipe corrige. `03_corrigir_modelo.cs` só roda se a equipe pedir.
+- **A skill faz todo o projeto executivo a partir desse modelo:** vistas, cotas, identificadores, textos, implantação
+  (rua, lotes, numeração, norte, recuos), plantas complementares, tabelas, carimbo (com QR code), pranchas ARQ e DET,
+  conferência e emissão. O checklist do escritório está ligado item a item em `references/checklist-executivo.md`.
+- **Elementos físicos do executivo** (abrigo de medidores, caixa de captação, lixeira, piso tátil, rebaixo de meio-fio,
+  ducha, casa de gás): a skill **propõe** — insere as famílias numa posição calculada (`06_elementos_externos.cs`),
+  mostra a implantação e só segue com a aprovação do arquiteto ("aprovar", ajuste no Revit ou "desfazer").
+- **Regras de projeto do checklist** (peitoril, larguras de portas, bancadas): a fase 3 lista o que foge do padrão; a skill
+  **corrige** no modelo o que o arquiteto aprovar (`03_corrigir_modelo.cs` `peitoril`, `portas_largura`, `bancadas`).
+  O que é decisão de projeto (mover parede, mudar ambiente, porta pivotante) fica no relatório para a equipe.
+- **Dados de fora do modelo** (rua, largura, asfalto, lotes vizinhos, numeração, recuos, CPF, ART/RRT, tipo de construção,
+  link do QR code) vêm do questionário de abertura (`references/questionario-abertura.md`).
 
 ## Vários pavimentos (frequente)
 Toda rotina vale para casas de um ou mais pavimentos ("PAV. X N.A" com ambientes):
@@ -27,6 +32,11 @@ Toda rotina vale para casas de um ou mais pavimentos ("PAV. X N.A" com ambientes
   `05_montar_folhas_gerais.cs` (ver `references/gabarito-folhas.md`) e numere `i/N` pela quantidade final de folhas.
 - Áreas: construída por pavimento + total (`calcular_areas_indices.cs`).
 - **Escada não é detalhada** pela skill (aparece nas vistas como modelada, sem cotas nem detalhe próprio).
+
+## Checklist executivo do escritório
+`references/checklist-executivo.md` liga cada item do checklist unificado do escritório à skill: o que ela **faz**, o que ela
+**confere** (aponta no relatório das fases 3 e 10) e o que é da **equipe**. Use-o para responder "isso a skill faz?" e, ao fim de
+cada fase, para lembrar a equipe dos itens manuais daquela etapa.
 
 ## Três camadas (não misture)
 - **Método** (esta skill): fases, regras, scripts. Igual para todos os escritórios.
@@ -58,12 +68,12 @@ Toda rotina vale para casas de um ou mais pavimentos ("PAV. X N.A" com ambientes
 | 0 | Pré-voo | `references/fases/00-pre-voo.md` | pronta |
 | 1 | Recebimento do projeto modelado (dados do carimbo, estado da skill) | `references/fases/01-abertura.md` | pronta |
 | 2 | Planta de layout: anotação e folha de proposta (+ `02_desenhar_lote.cs` quando não há linhas de propriedade) | `references/fases/02-proposta.md` | pronta — testada na referência e no piloto |
-| 3 | Conferência do modelo (relatório para a equipe; a skill não corrige a modelagem) | `references/fases/03-conferencia.md` | pronta — testada no projeto de referência |
+| 3 | Conferência do modelo + regras de projeto do checklist (corrige o que o arquiteto aprovar) | `references/fases/03-conferencia.md` | pronta — testada no projeto de referência |
 | 4 | Ambientes de portas e janelas, nomes de ambientes | `references/fases/04-ambientes.md` | pronta — testada no projeto de referência |
 | 5 | Vistas e folhas do caderno ARQ (1/N a N/N; 7 folhas numa casa térrea) | `references/fases/05-vistas.md` | pronta — testada no projeto de referência |
-| 6 | Anotação (identificadores, níveis, cotas externas em cadeia; cotas por prancha em `06_cotar_pranchas.cs`) | `references/fases/06-anotacao.md` | pronta — testada no projeto de referência |
+| 6 | Anotação: identificadores, níveis, cotas em 3 escalas, paisagismo oculto (`06_anotar_planta.cs`); cotas por prancha e eixos hidrossanitários (`06_cotar_pranchas.cs`); textos, paginação, ar e hidro (`06_textos.cs`); implantação e recuos (`06_implantacao.cs`); elementos externos em proposta (`06_elementos_externos.cs`) | `references/fases/06-anotacao.md` | pronta — testada no projeto de referência |
 | 7 | Tabelas (vêm do template; dados das fases 3 e 4) | `references/fases/07-tabelas.md` | pronta |
-| 8 | Carimbo: dados, áreas e índices (`08_regioes_areas.cs` + `calcular_areas_indices.cs`) | `references/fases/08-folhas-carimbo.md` | pronta — validada na referência e no piloto |
+| 8 | Carimbo: dados, áreas e índices (`08_regioes_areas.cs` + `calcular_areas_indices.cs`), QR code (`08_qrcode.cs`) | `references/fases/08-folhas-carimbo.md` | pronta — validada na referência e no piloto |
 | 9 | Caderno DET (montagens + folhas A3) | `references/fases/09-caderno-det.md` | pronta — testada no projeto de referência (telhado manual) |
 | 10 | Conferência final | `references/fases/10-conferencia-final.md` | pronta — testada no projeto de referência |
 | 11 | Emissão | `references/fases/11-emissao.md` | pronta — testada no projeto de referência |
@@ -80,6 +90,7 @@ Toda rotina vale para casas de um ou mais pavimentos ("PAV. X N.A" com ambientes
 - `references/perfil-escritorio.md` — campos do perfil do escritório
 - `references/parametros.md` — parâmetros compartilhados da skill (GUIDs fixos)
 - `references/receitas-pranchas.md` — conteúdo de cada prancha (do projeto de referência)
+- `references/checklist-executivo.md` — checklist executivo do escritório × o que a skill faz, confere ou deixa com a equipe
 - `references/relatorio-piloto.md` — piloto num projeto novo: o que foi corrigido e pendências do template master
 - `scripts/` — rotinas C# para o MCP do Revit
 

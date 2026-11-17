@@ -4,12 +4,14 @@
 //   executivo   — fica no 06_anotar_planta.cs (cadeia integrada + total do lote por fora dos muros, nas 4 faces)
 //   layout      — medidas internas de cada ambiente (largura e comprimento), tipo de cota só com texto
 //   tomadas     — ao longo de cada parede com tomada: limite da parede → tomada → tomada → limite da parede
+//   hidro       — eixos hidrossanitários amarrados (checklist): ao longo de cada parede com louça/ponto hidráulico,
+//                 limite da parede → eixo da peça → eixo da peça → limite da parede (planta de hidro e gás ou executivo)
 //   iluminacao  — por ambiente, eixo e fileira: parede → luminária → luminária → parede, com a linha passando pela fileira; linear pelas pontas
 //   cobertura   — por fora, nas 4 faces: contorno do telhado com corpo × beiral (faces externas da edificação) + total
 //   corte       — só na vertical: uma cadeia por ambiente cortado (piso acabado → forro → laje acima dele, com a espessura)
 //                 + linha à esquerda com o piso acabado de cada pavimento e o topo (pé-direito por pavimento + total)
 // parameters[0] = vistas separadas por ";" (obrigatório)
-// parameters[1] = modo: auto (padrão) | layout | tomadas | iluminacao | cobertura | corte
+// parameters[1] = modo: auto (padrão) | layout | tomadas | hidro | iluminacao | cobertura | corte
 //                 auto = pelo nome do modelo de vista e da vista (LAYOUT, TOMADA/PONTOS ELÉTRICOS, ILUMINAÇÃO/LUMINOTÉCNICO, COBERTURA, corte)
 // parameters[2] = "refazer" apaga as cotas lineares da vista antes (sem isso, vista que já tem cota linear é pulada)
 // parameters[3] = nome do tipo de cota (opcional; padrão: layout "VZ-Cota Interna", demais "VZ-Cota 1-<escala mais próxima>")
@@ -29,6 +31,7 @@ Func<View, string> Modo = v => {
     var tn = v.ViewTemplateId != ElementId.InvalidElementId ? SemAcento(document.GetElement(v.ViewTemplateId).Name) : ""; var n = SemAcento(v.Name) + " " + tn;
     if (v.ViewType == ViewType.Section) return "corte";
     if (n.Contains("LAYOUT") || n.Contains("SETORIZA")) return "layout";
+    if (n.Contains("HIDRO")) return "hidro";
     if (n.Contains("TOMADA") || n.Contains("PONTOS ELETRICOS")) return "tomadas";
     if (n.Contains("ILUMINA") || n.Contains("LUMINOTEC")) return "iluminacao";
     if (n.Contains("COBERTURA")) return "cobertura";
@@ -124,8 +127,8 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
                 }
             }
         }
-        else if (modo == "tomadas" || modo == "iluminacao") {
-            var cat = modo == "tomadas" ? BuiltInCategory.OST_ElectricalFixtures : BuiltInCategory.OST_LightingFixtures;
+        else if (modo == "tomadas" || modo == "iluminacao" || modo == "hidro") {
+            var cat = modo == "tomadas" ? BuiltInCategory.OST_ElectricalFixtures : modo == "hidro" ? BuiltInCategory.OST_PlumbingFixtures : BuiltInCategory.OST_LightingFixtures;
             var pecas = new FilteredElementCollector(document, vista.Id).OfCategory(cat).WhereElementIsNotElementType().OfType<FamilyInstance>().ToList();
             if (modo == "tomadas") pecas.AddRange(new FilteredElementCollector(document, vista.Id).OfCategory(BuiltInCategory.OST_LightingDevices).WhereElementIsNotElementType().OfType<FamilyInstance>());   // interruptores
             Func<FamilyInstance, XYZ> Pt = fi => (fi.Location as LocationPoint)?.Point;
@@ -133,7 +136,7 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
                 return rooms.FirstOrDefault(r => r.IsPointInRoom(new XYZ(p.X, p.Y, z + F(1.0)))) ?? rooms.FirstOrDefault(r => r.IsPointInRoom(new XYZ(p.X - fi.FacingOrientation.X * F(0.1), p.Y - fi.FacingOrientation.Y * F(0.1), z + F(1.0))))
                     ?? rooms.FirstOrDefault(r => r.IsPointInRoom(new XYZ(p.X + fi.FacingOrientation.X * F(0.1), p.Y + fi.FacingOrientation.Y * F(0.1), z + F(1.0)))); };
             int semAmb = 0;
-            if (modo == "tomadas") {
+            if (modo == "tomadas" || modo == "hidro") {
                 // agrupa por ambiente + parede (direção da face): uma cadeia por trecho de parede com tomadas
                 var grupos = pecas.Where(fi => Pt(fi) != null).GroupBy(fi => { var r = Amb(fi); var f = fi.FacingOrientation; return (r == null ? "-" : r.Id.ToString()) + "|" + Math.Round(f.X, 2) + "|" + Math.Round(f.Y, 2) + "|" + Math.Round(Coord(Pt(fi), new XYZ(f.X, f.Y, 0).Normalize()) * 0.3048 * 10) ; });
                 foreach (var g in grupos) {

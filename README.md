@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.6.0-A51C1C?style=flat-square">
+  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.7.0-A51C1C?style=flat-square">
   <img alt="Revit" src="https://img.shields.io/badge/Revit-2025-1E1E1E?style=flat-square">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-mcp--servers--for--revit-1E1E1E?style=flat-square">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1E1E1E?style=flat-square">
@@ -28,20 +28,22 @@
 ---
 
 > [!IMPORTANT]
-> **A equipe modela, a skill detalha.** Paredes, esquadrias, pisos, forros, cobertura, ambientes e o layout são modelados
-> pela equipe. A skill parte do modelo pronto e faz todo o detalhamento técnico executivo, sem criar, mover ou apagar
-> elementos do projeto.
+> **A equipe modela, a skill faz o executivo.** Paredes, esquadrias, pisos, forros, cobertura, ambientes e o layout são
+> modelados pela equipe. A partir do modelo pronto, a skill faz o projeto executivo inteiro:
+> - anotações, cotas, implantação, plantas complementares, carimbo, pranchas e emissão;
+> - elementos externos (abrigo, captação, lixeira…) **propostos** para aprovação;
+> - regras de projeto fora do padrão **corrigidas** com aprovação.
 
 ## ✦ O que a skill faz
 
 | A skill faz | Continua com a equipe |
 |---|---|
-| Conferência do modelo, com relatório de pendências | Toda a modelagem, inclusive o layout |
-| Plantas, cortes, fachadas e perspectivas de cada pavimento | Corrigir o que a conferência apontar |
-| Identificadores, cotas e textos de acabamento no padrão do escritório | Escada (não é detalhada pela skill) |
-| Anotação da planta de layout (nomes, cotas em texto, acabamentos) | Folha de telhado do DET e cotas L/H das esquadrias |
-| Tabelas, áreas, taxas e índices no carimbo | Especificações que não estão no modelo |
-| Montagem das pranchas ARQ (A1) e DET (A3), conferência e emissão em PDF | Aprovação de cada fase |
+| Conferência do modelo e correção das regras de projeto aprovadas (peitoril, portas, bancadas) | Toda a modelagem, inclusive o layout |
+| Plantas, cortes, fachadas, perspectivas e plantas complementares (ar, hidro e gás, iluminação externa) | Decisões de projeto que a conferência apontar |
+| Identificadores, cotas em três escalas, textos, paginação e eixos hidrossanitários | Escada (não é detalhada pela skill) |
+| Implantação: rua, lotes vizinhos, numeração, norte e recuos em azul tracejado | Cotas L/H das esquadrias e cadernos de pedras/pintura (próxima etapa) |
+| Elementos externos propostos para aprovação (abrigo, captação, lixeira, piso tátil, rebaixo, gás, ducha) | Aprovação de cada fase |
+| Tabelas, áreas, índices, carimbo com QR code, pranchas ARQ (A1) e DET (A3), conferência e emissão | |
 
 Genérica: serve a qualquer escritório. Os dados do escritório ficam no perfil (`skill/config/escritorio.json`), nunca no código.
 
@@ -71,12 +73,12 @@ flowchart LR
 | 0 | Pré-voo | Confere Revit, MCP, arquivos abertos, rede e template (só leitura) |
 | 1 | Recebimento | Registra o projeto modelado, dados do carimbo e pavimentos |
 | 2 | Planta de layout | Anota o layout da equipe e monta a folha de proposta |
-| 3 | Conferência do modelo | Relatório BLOQUEIA / CORRIGIR / ATENÇÃO para a equipe |
+| 3 | Conferência do modelo | Relatório BLOQUEIA / CORRIGIR / ATENÇÃO e regras de projeto; corrige o que for aprovado |
 | 4 | Ambientes | Ambiente de cada porta e janela, para as tabelas |
 | 5 | Vistas e folhas | Plantas por pavimento, cortes, fachadas, perspectivas e pranchas ARQ |
-| 6 | Anotação | Identificadores, níveis, cotas e textos de materiais |
+| 6 | Anotação | Identificadores, níveis, cotas, textos, implantação, recuos e elementos externos (proposta) |
 | 7 | Tabelas | Esquadrias e luminotécnica a partir do modelo |
-| 8 | Carimbo e áreas | Regiões de área, taxas, índices e campos do carimbo |
+| 8 | Carimbo e áreas | Regiões de área, taxas, índices, campos do carimbo e QR code |
 | 9 | Detalhamento (DET) | Montagens de esquadrias e bancadas em folhas A3 |
 | 10 | Conferência final | Numeração i/N, folhas vazias, carimbo, tabelas, área útil |
 | 11 | Emissão | PDF por caderno (opcional: por folha e DWG) e registro |
@@ -87,15 +89,26 @@ flowchart LR
 
 | Prancha | Regra |
 |---|---|
-| Planta executiva | Nenhuma cota dentro do lote. Nas 4 faces, por fora dos muros, 3 linhas: detalhada (limites de paredes e pisos), blocos (divisas, muros, edificação) e total |
+| Planta executiva | Nenhuma cota dentro do lote. Nas 4 faces, por fora dos muros, 3 escalas: micro (vãos de portas e janelas), médio (ambiente por ambiente) e macro (total do terreno) |
 | Layout | Medidas dos ambientes só em texto, no canto de cada ambiente |
 | Tomadas | Ao longo da parede: parede › ponto › ponto › parede |
 | Iluminação | Por ambiente e por fileira; perfis e trilhos pelas pontas |
 | Cobertura | Corpo e beiral separados, mais o total |
 | Cortes | Só na vertical: piso › forro › laje em cada ambiente; à esquerda, piso de cada pavimento e altura total |
+| Ar-condicionado · hidro e gás · iluminação externa | BTU/h e modelo de cada equipamento, distância evaporadora–condensadora; chamadas com altura em torneiras, água quente/fria e gás; altura das luminárias de parede |
 
 Textos (chamadas de materiais, REVEST., PISO, tomadas fora da altura padrão, bancadas) vêm do modelo. O que não estiver no
 modelo vira aviso no relatório; a skill nunca inventa texto.
+</details>
+
+<details>
+<summary><b>Checklist executivo do escritório</b></summary>
+<br>
+
+Cada item do checklist executivo está ligado à skill em [`skill/references/checklist-executivo.md`](skill/references/checklist-executivo.md):
+o que ela **faz**, o que ela **confere** (aponta nos relatórios da conferência do modelo e da conferência final) e o que fica
+com a **equipe**. A conferência do modelo mede no modelo as regras de projeto do checklist (peitoril, portas, vaga,
+bancadas) e a conferência final procura os itens das pranchas (carimbo, implantação, elementos, legendas, tabelas).
 </details>
 
 <details>
@@ -125,6 +138,11 @@ Detalhes em [`skill/references/gabarito-folhas.md`](skill/references/gabarito-fo
 | **6** | Reinicie o Claude Desktop e, no Revit, clique em **Suplementos › Revit MCP Switch** |
 
 O passo a passo ilustrado está no [**guia de uso em PDF**](docs/Guia_Skill_Executivo_Revit.pdf).
+
+> [!TIP]
+> O suplemento aparece no Revit, mas o conector **revit-mcp** não aparece no Claude Desktop? Feche o Claude Desktop por
+> completo e rode `installer/CONFIGURAR_MCP_CLAUDE.cmd`: ele grava o servidor em todas as pastas de configuração do
+> Claude Desktop (inclusive a da versão da Microsoft Store), em UTF-8 sem BOM.
 
 ### Para o responsável (gerar o instalador)
 
@@ -190,7 +208,7 @@ Distribua o `.exe` pela release do GitHub ou pela pasta-base.
 | `02_proposta.cs` | Folhas da proposta de layout, uma por pavimento, com a implantação na primeira |
 | `02_desenhar_lote.cs` | Lote, projeção, cotas e recorte nas implantações sem linhas de propriedade |
 | `03_conferir_modelo.cs` | Conferência do modelo: BLOQUEIA / CORRIGIR / ATENÇÃO (só leitura) |
-| `03_corrigir_modelo.cs` | Correções automáticas, só a pedido da equipe |
+| `03_corrigir_modelo.cs` | Correções aprovadas: sobras do modelo e regras de projeto (peitoril, portas, bancadas) |
 | `04_ambientes.cs` | Campo AMBIENTE das portas e janelas |
 </details>
 
@@ -218,8 +236,11 @@ Distribua o `.exe` pela release do GitHub ou pela pasta-base.
 | Script | Função |
 |---|---|
 | `06_anotar_planta.cs` | Identificadores, cotas de nível e cotas externas (3 linhas por face) |
-| `06_cotar_pranchas.cs` | Cotas por prancha: layout, tomadas, iluminação, cobertura e cortes |
-| `06_textos.cs` | Chamadas de materiais, revestimentos, forro, tomadas e bancadas |
+| `06_cotar_pranchas.cs` | Cotas por prancha: layout, tomadas, eixos hidrossanitários, iluminação, cobertura e cortes |
+| `06_textos.cs` | Chamadas de materiais, revestimentos, forro, tomadas, paginação, ar-condicionado, hidro e gás, bancadas |
+| `06_implantacao.cs` | Rua, largura, pavimentação, lotes vizinhos, numeração, norte e linhas de recuo |
+| `06_elementos_externos.cs` | Proposta de abrigo, gás, captação, lixeira, rebaixo, ducha e piso tátil; aprovar ou desfazer |
+| `08_qrcode.cs` | QR code no carimbo de todas as folhas |
 | `08_regioes_areas.cs` | Regiões de área construída, permeável e piscina a partir dos pisos |
 | `calcular_areas_indices.cs` | Áreas, taxas e índices a partir das regiões da implantação |
 | `09_montagens.cs` | Montagens de esquadrias, bancadas e especiais, com elevação, topo e 3D |

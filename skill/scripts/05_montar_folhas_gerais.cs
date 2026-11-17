@@ -1,7 +1,8 @@
-// SKILL EXECUTIVO REVIT — Fase 5.5: montagem das folhas gerais do caderno ARQ (1/7, 2/7, 5/7)
+// SKILL EXECUTIVO REVIT — Fase 5.5: montagem das folhas gerais do caderno ARQ (1/7, 2/7, 5/7, ar, hidro, ilumext)
 // send_code_to_revit · transactionMode "none"
 // parameters[0] = folha: "1/7" (planta executiva + implantação + tabelas de esquadrias),
-//                 "2/7" (cobertura + situação) ou "5/7" (iluminação e tomadas + tabela luminotécnica)
+//                 "2/7" (cobertura + situação), "5/7" (iluminação e tomadas + tabela luminotécnica) ou as complementares do
+//                 checklist: "ar" (ar-condicionado), "hidro" (pontos de hidráulica e gás), "ilumext" (iluminação externa)
 // parameters[1] = número da folha a criar/usar (ex.: "1/7"; em teste "SKILL 1/7")
 // parameters[2] = prefixo das vistas criadas pela skill ("" no uso real; "SKILL " em teste)
 // parameters[3] = pavimento(s) das plantas, separados por ";" (padrão "TERREO"; ex.: "TERREO;SUPERIOR" tenta os dois na mesma folha)
@@ -48,7 +49,13 @@ if (gab == "1/7") {
     }
     if (temMaisBaixo) tabelas = new[] { "TABELA LUMINOTÉCNICO" };
     conteudo = "PLANTA DE ILUMINAÇÃO, INTERRUPTORES E PONTOS DE TOMADA" + sufixoPav; nomeFolha = "PRANCHA 05";
-} else return "Folha não suportada: " + gab + " (1/7, 2/7, 5/7)";
+} else if (gab == "ar" || gab == "hidro" || gab == "ilumext") {
+    // folhas complementares (checklist): uma planta por pavimento listado; sem legendas/tabelas fixas
+    string sufV = gab == "ar" ? " AR CONDICIONADO" : gab == "hidro" ? " HIDRO E GÁS" : " ILUMINAÇÃO EXTERNA";
+    foreach (var pv in pavsFolha) blocos.Add(Tuple.Create("PAVIMENTO " + pv + sufV, new string[0]));
+    conteudo = (gab == "ar" ? "PLANTA DE AR-CONDICIONADO" : gab == "hidro" ? "PLANTA DE PONTOS DE HIDRÁULICA E GÁS" : "PLANTA DE ILUMINAÇÃO EXTERNA") + sufixoPav;
+    nomeFolha = "PRANCHA";
+} else return "Folha não suportada: " + gab + " (1/7, 2/7, 5/7, ar, hidro, ilumext)";
 if (mNum.Success) nomeFolha = "PRANCHA " + mNum.Groups[1].Value.PadLeft(2, '0');
 bool naoCoube = false;
 

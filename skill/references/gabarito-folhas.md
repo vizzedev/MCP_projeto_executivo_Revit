@@ -83,3 +83,9 @@ Como montar:
 3. Monte cada folha com o número definitivo (`"01/10"` …). O nome da folha vira "PRANCHA 01" … e o conteúdo do carimbo ganha
    " - PAVIMENTO X" quando o modelo tem mais de um pavimento.
 4. A conferência final (`10_conferencia_final.cs`) confere a sequência i/N.
+
+## Folhas complementares (checklist executivo)
+Quando a equipe modelou os pontos, entram depois da folha de iluminação e tomadas, nesta ordem: **ar-condicionado** (`ar`),
+**hidro e gás** (`hidro`), **iluminação externa** (`ilumext`, só o pavimento mais baixo). Monte com `05_montar_folhas_gerais.cs`
+`[tipo, número, prefixo, pavimentos]`. Uma folha por pavimento, ou dois juntos se `"testar"` devolver `COUBE`. Elas contam no N
+da numeração i/N.

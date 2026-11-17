@@ -1,13 +1,19 @@
 // SKILL EXECUTIVO REVIT — Fase 6: anotação automática de plantas
 // send_code_to_revit · transactionMode "none"
 // parameters[0] = nome da vista (planta) a anotar (ex.: "PAVIMENTO TERREO EXECUTIVO")
-// parameters[1] = o que anotar, separado por ";" (padrão "portas;janelas;ambientes;niveis;cotas_externas"):
+// parameters[1] = o que anotar, separado por ";" (padrão "portas;janelas;ambientes;niveis;cotas_externas;paisagismo"):
 //   portas / janelas — identificador em cada porta/janela ainda sem identificador na vista
-//   ambientes        — identificador de ambiente em cada ambiente ainda sem identificador na vista
+//   ambientes        — identificador de ambiente em cada ambiente ainda sem identificador na vista; o checklist pede
+//                      nome, área, perímetro e nível: usa o tipo com "PERÍMETRO" no nome, se o modelo tiver
+//   paisagismo       — esconde vegetação e entorno (categorias Plantação e Entorno) nesta vista: o paisagismo fica só na
+//                      planta de layout. Se a vista usa modelo de vista que controla as categorias, só avisa.
 //   niveis           — cota de nível (elevação de ponto) no piso de cada ambiente
 //   cotas_externas   — regra do escritório: TODAS as cotas ficam fora do lote (por fora dos muros), nas 4 faces, em TODOS os pavimentos:
-//                      1ª linha = cadeia integrada de divisa a divisa (limites de paredes e pisos; vãos não);
-//                      2ª linha = blocos (divisas, muros, extremos da edificação); 3ª linha = total do lote. Cotas lineares fora do lote são tratadas como da skill.
+//                      cotagem em três escalas (checklist executivo), todas integradas de divisa a divisa:
+//                      1ª linha (micro)  = vãos de portas e janelas da fachada daquela face + extremos da edificação;
+//                      2ª linha (médio)  = ambiente por ambiente (limites de paredes e pisos; ombreiras não);
+//                      3ª linha (macro)  = total do terreno (em todas as plantas). Sem vão externo na face, a micro não é criada.
+//                      Cotas lineares fora do lote são tratadas como da skill.
 //   refazer_cotas    — apaga as cotas lineares fora do lote e cria de novo
 //   apagar_cotas_internas — apaga as cotas lineares com origem dentro do lote (versões antigas da skill cotavam por dentro)
 // Tipos do escritório (procurados pelo nome; se não houver, usa o primeiro da categoria):
@@ -19,7 +25,7 @@
 // (linhas de propriedade visíveis ou subposição do térreo); senão a cadeia fica só na edificação e o relatório avisa.
 Func<int, string> P = i => parameters.Length > i ? ((parameters[i] as string) ?? "").Trim() : "";
 var nomeVista = P(0);
-var opcoes = (P(1) == "" ? "portas;janelas;ambientes;niveis;cotas_externas" : P(1).ToLower()).Split(';').Select(s => s.Trim()).ToList();
+var opcoes = (P(1) == "" ? "portas;janelas;ambientes;niveis;cotas_externas;paisagismo" : P(1).ToLower()).Split(';').Select(s => s.Trim()).ToList();
 var vista = new FilteredElementCollector(document).OfClass(typeof(ViewPlan)).Cast<ViewPlan>().FirstOrDefault(v => !v.IsTemplate && v.Name == nomeVista);
 if (vista == null) return "ERRO: planta '" + nomeVista + "' não encontrada.";
 Func<double, double> F = m => m / 0.3048;
@@ -56,7 +62,10 @@ using (var t = new Transaction(document, "Skill: anotar planta")) {
     }
     // ambientes
     if (opcoes.Contains("ambientes")) {
-        var tipo = TipoTag(BuiltInCategory.OST_RoomTags, "Identificador de Ambiente"); int n = 0, pulados = 0;
+        var tiposAmb = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_RoomTags).WhereElementIsElementType().ToElements();
+        var tipoPer = tiposAmb.FirstOrDefault(x => { var nn = x.Name.ToUpper(); return nn.Contains("PERÍMETRO") || nn.Contains("PERIMETRO"); });
+        var tipo = tipoPer != null ? tipoPer.Id : TipoTag(BuiltInCategory.OST_RoomTags, "Identificador de Ambiente"); int n = 0, pulados = 0;
+        if (tipoPer == null) log.AppendLine("ambientes: o modelo não tem identificador com PERÍMETRO no nome — usado o padrão (o checklist pede nome, área, perímetro e nível)");
         foreach (var r in rooms) {
             if (jaRoomTag.Contains(r.Id)) { pulados++; continue; }
             var p = ((LocationPoint)r.Location).Point;
@@ -64,6 +73,16 @@ using (var t = new Transaction(document, "Skill: anotar planta")) {
             if (tag != null && tipo != ElementId.InvalidElementId) tag.ChangeTypeId(tipo); n++;
         }
         log.AppendLine("ambientes: " + n + " identificadores novos" + (pulados > 0 ? ", " + pulados + " já tinham" : ""));
+    }
+    // paisagismo só na planta de layout
+    if (opcoes.Contains("paisagismo") && !vista.Name.ToUpper().Contains("LAYOUT")) {
+        var catsP = new[] { BuiltInCategory.OST_Planting, BuiltInCategory.OST_Entourage };
+        bool controlado = false;
+        if (vista.ViewTemplateId != ElementId.InvalidElementId) { var vt = document.GetElement(vista.ViewTemplateId) as View;
+            try { controlado = vt != null && !vt.GetNonControlledTemplateParameterIds().Contains(new ElementId(BuiltInParameter.VIS_GRAPHICS_MODEL)); } catch { controlado = true; } }
+        if (controlado) log.AppendLine("paisagismo: o modelo de vista controla as categorias — esconda Plantação e Entorno no modelo de vista \"" + document.GetElement(vista.ViewTemplateId).Name + "\"");
+        else { int nc = 0; foreach (var bc in catsP) { var cid = new ElementId(bc); try { if (vista.CanCategoryBeHidden(cid) && !vista.GetCategoryHidden(cid)) { vista.SetCategoryHidden(cid, true); nc++; } } catch { } }
+            log.AppendLine("paisagismo: " + (nc > 0 ? "vegetação e entorno escondidos nesta vista" : "já estava escondido")); }
     }
     // cotas de nível no piso de cada ambiente
     if (opcoes.Contains("niveis")) {
@@ -189,7 +208,35 @@ using (var t = new Transaction(document, "Skill: anotar planta")) {
             Func<List<Tuple<double, Reference, bool>>, List<Tuple<double, Reference, bool>>> Extremos = l => { if (l.Count == 0) return l; double mn = l.Min(q => q.Item1), mx = l.Max(q => q.Item1); return l.Where(q => q.Item1 < mn + F(0.01) || q.Item1 > mx - F(0.01)).ToList(); };
             blocoX.AddRange(Extremos(casaX)); blocoY.AddRange(Extremos(casaY));
             var bloX = Cadeia(blocoX, lx0, lx1); var bloY = Cadeia(blocoY, ly0, ly1);
-            // três linhas por face (padrão do escritório): detalhada a 5 mm do que estiver desenhado, blocos e total a cada 6,5 mm (no papel)
+            // micro: vãos das portas e janelas externas (um lado sem ambiente), pelas referências Esquerda/Direita da família,
+            // na face do lote para a qual a fachada está voltada (pelo centro da edificação)
+            var extCasaX = Extremos(casaX); var extCasaY = Extremos(casaY);
+            double cxCasa = casaX.Count > 0 ? (casaX.Min(q => q.Item1) + casaX.Max(q => q.Item1)) / 2 : (lx0 + lx1) / 2;
+            double cyCasa = casaY.Count > 0 ? (casaY.Min(q => q.Item1) + casaY.Max(q => q.Item1)) / 2 : (ly0 + ly1) / 2;
+            Phase faseV = null; try { faseV = document.GetElement(vista.get_Parameter(BuiltInParameter.VIEW_PHASE).AsElementId()) as Phase; } catch { }
+            var vaosF = new Dictionary<string, List<Tuple<double, Reference, bool>>> { { "frente", new List<Tuple<double, Reference, bool>>() }, { "fundo", new List<Tuple<double, Reference, bool>>() }, { "esquerda", new List<Tuple<double, Reference, bool>>() }, { "direita", new List<Tuple<double, Reference, bool>>() } };
+            int vaosSemRef = 0, nVaos = 0;
+            var esquadrias = new FilteredElementCollector(document, vista.Id).WherePasses(new LogicalOrFilter(new ElementCategoryFilter(BuiltInCategory.OST_Doors), new ElementCategoryFilter(BuiltInCategory.OST_Windows))).WhereElementIsNotElementType().Cast<FamilyInstance>().ToList();
+            foreach (var fiV in esquadrias) {
+                Autodesk.Revit.DB.Architecture.Room rDe = null, rPara = null;
+                try { if (faseV != null) { rDe = fiV.get_FromRoom(faseV); rPara = fiV.get_ToRoom(faseV); } else { rDe = fiV.FromRoom; rPara = fiV.ToRoom; } } catch { }
+                if (rDe != null && rPara != null) continue;   // vão interno
+                var lpV = fiV.Location as LocationPoint; if (lpV == null) continue;
+                var mao = new XYZ(fiV.HandOrientation.X, fiV.HandOrientation.Y, 0); if (mao.GetLength() < 0.5) continue; mao = mao.Normalize();
+                double wV = 0; foreach (var bip in new[] { BuiltInParameter.DOOR_WIDTH, BuiltInParameter.WINDOW_WIDTH, BuiltInParameter.FAMILY_WIDTH_PARAM, BuiltInParameter.FAMILY_ROUGH_WIDTH_PARAM }) {
+                    var pw = fiV.get_Parameter(bip); if (pw == null || !pw.HasValue || pw.AsDouble() <= 0) pw = fiV.Symbol.get_Parameter(bip); if (pw != null && pw.HasValue && pw.AsDouble() > 0) { wV = pw.AsDouble(); break; } }
+                if (wV <= 0) { vaosSemRef++; continue; }
+                IList<Reference> rEsq = null, rDir = null; try { rEsq = fiV.GetReferences(FamilyInstanceReferenceType.Left); rDir = fiV.GetReferences(FamilyInstanceReferenceType.Right); } catch { }
+                if (rEsq == null || rDir == null || rEsq.Count == 0 || rDir.Count == 0) { vaosSemRef++; continue; }
+                var pE = lpV.Point - mao.Multiply(wV / 2); var pD = lpV.Point + mao.Multiply(wV / 2);
+                string faceV;
+                if (Math.Abs(mao.X) > 0.99) faceV = lpV.Point.Y < cyCasa ? "frente" : "fundo";
+                else if (Math.Abs(mao.Y) > 0.99) faceV = lpV.Point.X < cxCasa ? "esquerda" : "direita";
+                else continue;   // parede inclinada: fica sem micro
+                bool hz = faceV == "frente" || faceV == "fundo";
+                vaosF[faceV].Add(Tuple.Create(hz ? pE.X : pE.Y, rEsq[0], false)); vaosF[faceV].Add(Tuple.Create(hz ? pD.X : pD.Y, rDir[0], false)); nVaos++;
+            }
+            // três linhas por face (checklist): micro (vãos) a 5 mm do que estiver desenhado, médio (ambientes) e macro (total) a cada 6,5 mm no papel
             double esc = vista.Scale, o1 = F(0.005 * esc), o2 = F(0.0115 * esc), o3 = F(0.018 * esc);
             // a linha fica fora do lote E de tudo o que está modelado além dele (calçada, passeio): usa a caixa de paredes e pisos da vista
             double ex0 = lx0, ey0 = ly0, ex1 = lx1, ey1 = ly1;
@@ -221,14 +268,21 @@ using (var t = new Transaction(document, "Skill: anotar planta")) {
                 double pos2 = face == "frente" ? ey0 - o2 : face == "fundo" ? ey1 + o2 : face == "esquerda" ? ex0 - o2 : ex1 + o2;
                 double pos3 = face == "frente" ? ey0 - o3 : face == "fundo" ? ey1 + o3 : face == "esquerda" ? ex0 - o3 : ex1 + o3;
                 Func<double, Line> L = pos => horiz ? Line.CreateBound(new XYZ(lx0, pos, z), new XYZ(lx1, pos, z)) : Line.CreateBound(new XYZ(pos, ly0, z), new XYZ(pos, ly1, z));
-                var dParc = Cotar(cad, L(pos1));
-                // blocos: sempre com as duas divisas da cadeia detalhada nas pontas; só cria se tiver trecho intermediário
-                var blo = new List<Tuple<double, Reference, bool>> { cad[0] }; blo.AddRange((horiz ? bloX : bloY).Where(q => q.Item1 > cad[0].Item1 + F(0.01) && q.Item1 < cad[cad.Count - 1].Item1 - F(0.01))); blo.Add(cad[cad.Count - 1]);
-                Dimension dBlo = blo.Count > 2 ? Cotar(blo, L(pos2)) : null; if (dBlo != null) { nCot++; criadasExt.Add(dBlo); fora[dBlo.Id] = face == "frente" ? -XYZ.BasisY : face == "fundo" ? XYZ.BasisY : face == "esquerda" ? -XYZ.BasisX : XYZ.BasisX; }
-                var dTot = Cotar(new List<Tuple<double, Reference, bool>> { cad[0], cad[cad.Count - 1] }, L(dBlo != null ? pos3 : pos2));
-                foreach (var d in new[] { dParc, dTot }) { if (d == null) continue; nCot++; criadasExt.Add(d); }
-                if (dParc != null) fora[dParc.Id] = face == "frente" ? -XYZ.BasisY : face == "fundo" ? XYZ.BasisY : face == "esquerda" ? -XYZ.BasisX : XYZ.BasisX;
-                if (dParc == null) avisos.Add(face + ": cadeia não criada");
+                Func<Dimension, Dimension> Marcar = d => { if (d != null) { nCot++; criadasExt.Add(d); fora[d.Id] = face == "frente" ? -XYZ.BasisY : face == "fundo" ? XYZ.BasisY : face == "esquerda" ? -XYZ.BasisX : XYZ.BasisX; } return d; };
+                // micro: divisas + extremos da edificação + vãos da fachada (só se houver vão externo nesta face)
+                Dimension dMicro = null;
+                if (vaosF[face].Count > 0) {
+                    var mic = new List<Tuple<double, Reference, bool>> { cad[0] };
+                    mic.AddRange((horiz ? extCasaX : extCasaY).Where(q => q.Item1 > cad[0].Item1 + F(0.01) && q.Item1 < cad[cad.Count - 1].Item1 - F(0.01)));
+                    mic.AddRange(vaosF[face].Where(q => q.Item1 > cad[0].Item1 + F(0.01) && q.Item1 < cad[cad.Count - 1].Item1 - F(0.01)));
+                    mic.Add(cad[cad.Count - 1]);
+                    dMicro = Marcar(Cotar(Cadeia(mic, ini, fim), L(pos1)));
+                    if (dMicro == null) avisos.Add(face + ": linha dos vãos (micro) não criada");
+                }
+                // médio: ambiente por ambiente (paredes e pisos); macro: total do terreno
+                var dParc = Marcar(Cotar(cad, L(dMicro != null ? pos2 : pos1)));
+                Marcar(Cotar(new List<Tuple<double, Reference, bool>> { cad[0], cad[cad.Count - 1] }, L(dMicro != null ? pos3 : pos2)));
+                if (dParc == null) avisos.Add(face + ": cadeia dos ambientes não criada");
             }
             document.Regenerate();
             // trecho curto (texto mais largo que o trecho, ~6 mm no papel): textos alternados — um na linha, o seguinte deslocado para fora
@@ -249,8 +303,9 @@ using (var t = new Transaction(document, "Skill: anotar planta")) {
                 double nx0 = Math.Min(cbv.Min.X, Math.Min(c0.X, c1.X)), ny0 = Math.Min(cbv.Min.Y, Math.Min(c0.Y, c1.Y)), nx1 = Math.Max(cbv.Max.X, Math.Max(c0.X, c1.X)), ny1 = Math.Max(cbv.Max.Y, Math.Max(c0.Y, c1.Y));
                 if (nx0 < cbv.Min.X - tol || ny0 < cbv.Min.Y - tol || nx1 > cbv.Max.X + tol || ny1 > cbv.Max.Y + tol) { cbv.Min = new XYZ(nx0, ny0, cbv.Min.Z); cbv.Max = new XYZ(nx1, ny1, cbv.Max.Z); try { vista.CropBox = cbv; avisos.Add("recorte da vista ampliado para caber as cotas"); } catch { } }
             }
+            if (vaosSemRef > 0) avisos.Add(vaosSemRef + " vão(s) externo(s) sem referências Esquerda/Direita ou largura na família — ficaram fora da linha dos vãos");
             if (superior && descartadas > 0) avisos.Add("pavimento superior: " + descartadas + " referências do térreo (muros/divisas) não aparecem nesta vista e ficaram de fora");
-            log.AppendLine("cotas externas: " + nCot + " linhas (cadeia + total em cada face), " + nSeg + " trechos; lote " + Math.Round((lx1 - lx0) * 0.3048, 2) + " × " + Math.Round((ly1 - ly0) * 0.3048, 2) + " m"
+            log.AppendLine("cotas externas: " + nCot + " linhas (vãos, ambientes e total em cada face; " + nVaos + " vãos externos), " + nSeg + " trechos; lote " + Math.Round((lx1 - lx0) * 0.3048, 2) + " × " + Math.Round((ly1 - ly0) * 0.3048, 2) + " m"
                 + (curtos > 0 ? "; " + curtos + " trechos curtos com texto escalonado (confira)" : "") + (descartadas > 0 ? "; " + descartadas + " referências não cotáveis descartadas" : "")
                 + (tipoExt == null ? " (sem tipo de cota linear)" : " (tipo \"" + tipoExt.Name + "\")") + (avisos.Count > 0 ? "\n  " + string.Join("\n  ", avisos) : ""));
         }
