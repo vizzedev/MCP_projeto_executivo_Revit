@@ -1,7 +1,7 @@
 ﻿<#
 =====================================================================
  SKILL EXECUTIVO REVIT — Instalador / atualizador (janela)
- Versão 1.3
+ Versão 1.4
 ---------------------------------------------------------------------
  Assistente em janela (Boas-vindas › Configuração › Perfil › Instalação › Concluído):
    - todas as perguntas nas duas primeiras telas; depois roda sozinho
@@ -28,7 +28,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
-$VersaoInstalador = "1.3"
+$VersaoInstalador = "1.4"
 # ---- pacote embutido: preenchido por montar-pacote.ps1 (base64 de um ZIP com skill\, installer\, docs\ e fonts\) ----
 $VersaoEmbutida = ""
 $PacoteEmbutido = ""
@@ -611,13 +611,32 @@ function Executar-Instalacao {
     # ("Zip file contains path with invalid characters")
     Add-Type -AssemblyName System.IO.Compression; Add-Type -AssemblyName System.IO.Compression.FileSystem
     $raizZip = Join-Path $emb $nomeSkill
+    # caminhos montados pelos NOMES das pastas, descendo a árvore (não depende do caminho completo do TEMP, que pode vir
+    # em nome curto 8.3 num computador e longo em outro) — o SKILL.md fica sempre em "<nome-da-skill>/SKILL.md"
+    function Zipar-Pasta($zip, [string]$dir, [string]$prefixo) {
+        foreach ($f in (Get-ChildItem -LiteralPath $dir -File)) { [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $prefixo + $f.Name, [System.IO.Compression.CompressionLevel]::Optimal) }
+        foreach ($d in (Get-ChildItem -LiteralPath $dir -Directory)) { Zipar-Pasta $zip $d.FullName ($prefixo + $d.Name + "/") }
+    }
     $zipArq = [System.IO.Compression.ZipFile]::Open($global:saida, [System.IO.Compression.ZipArchiveMode]::Create)
-    try {
-        foreach ($arqZ in (Get-ChildItem $raizZip -Recurse -File)) {
-            $rel = $nomeSkill + "/" + $arqZ.FullName.Substring($raizZip.Length).TrimStart('\', '/').Replace('\', '/')
-            [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zipArq, $arqZ.FullName, $rel, [System.IO.Compression.CompressionLevel]::Optimal)
-        }
-    } finally { $zipArq.Dispose() }
+    try { Zipar-Pasta $zipArq $raizZip ($nomeSkill + "/") } finally { $zipArq.Dispose() }
+    # conferência: o SKILL.md tem de estar na raiz da pasta da skill
+    $zipChk = [System.IO.Compression.ZipFile]::OpenRead($global:saida)
+    try { $okZip = @($zipChk.Entries | Where-Object { $_.FullName -eq ($nomeSkill + "/SKILL.md") }).Count -eq 1 } finally { $zipChk.Dispose() }
+    if (-not $okZip) {
+        # rede de segurança: remonta pelo lugar do SKILL.md (a pasta dele vira "<nome-da-skill>/") e confere de novo
+        Log "  ZIP com SKILL.md fora do lugar: remontando..."
+        $tmpZ = $global:saida + ".tmp"; Move-Item $global:saida $tmpZ -Force
+        $ent = [System.IO.Compression.ZipFile]::OpenRead($tmpZ); $novoZ = [System.IO.Compression.ZipFile]::Open($global:saida, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            $sk = $ent.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '(^|/)SKILL\.md$' } | Sort-Object { $_.FullName.Length } | Select-Object -First 1
+            $pref = $sk.FullName.Replace('\', '/'); $pref = $pref.Substring(0, $pref.Length - 8)
+            foreach ($e in $ent.Entries) { if (-not $e.Name) { continue }; $r = $e.FullName.Replace('\', '/'); if (-not $r.StartsWith($pref)) { continue }
+                $ne = $novoZ.CreateEntry($nomeSkill + "/" + $r.Substring($pref.Length), [System.IO.Compression.CompressionLevel]::Optimal); $s1 = $e.Open(); $s2 = $ne.Open(); $s1.CopyTo($s2); $s2.Dispose(); $s1.Dispose() }
+        } finally { $ent.Dispose(); $novoZ.Dispose(); Remove-Item $tmpZ -Force -ErrorAction SilentlyContinue }
+        $zipChk = [System.IO.Compression.ZipFile]::OpenRead($global:saida)
+        try { $okZip = @($zipChk.Entries | Where-Object { $_.FullName -eq ($nomeSkill + "/SKILL.md") }).Count -eq 1 } finally { $zipChk.Dispose() }
+        if (-not $okZip) { throw "ZIP da skill montado errado (SKILL.md fora de $nomeSkill/). Rode REFAZER_ZIP_SKILL.cmd." }
+    }
     Remove-Item $emb -Recurse -Force
     Etapa 3 "ok" ("Na Área de Trabalho: " + (Split-Path $global:saida -Leaf))
 

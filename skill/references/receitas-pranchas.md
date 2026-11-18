@@ -1,6 +1,6 @@
 # Receitas das pranchas
 
-Origem: projeto residencial de referência (extraído em 13/11/2026). Modelos de vista sem o prefixo do escritório (no master: "VZ-" + nome).
+Origem: projeto de referência Família Agra (extraído em 13/11/2026). Modelos de vista sem o prefixo do escritório (no master: "VZ-" + nome).
 Carimbos: Proposta = A1 Proposta Layout · ARQ = A1 Executivo Arquitetônico (todas as folhas) · DET = A3 Executivo Interiores/Detalhamento (todas as folhas).
 
 ### Caderno ARQ — carimbo "Prancha A1 Executivo Arquitetônico" — numeração n/7
@@ -43,7 +43,7 @@ Regra (definida pelo usuário): **uma folha de layout por pavimento**; é o conj
 |---|---|---|---|
 | 1/n | Planta de layout do pavimento + implantação layout + legenda | PLANTA BAIXA LAYOUT / IMPLANTAÇÃO LAYOUT | 1:75 / 1:100 |
 | 2/n… | Planta de layout dos demais pavimentos | PLANTA BAIXA LAYOUT | 1:75 |
-(No projeto de referência, térreo único: a folha 2/2 existe vazia → a skill deve gerar só as folhas dos pavimentos existentes.)
+(No Família Agra, térreo único: a folha 2/2 existe vazia → a skill deve gerar só as folhas dos pavimentos existentes.)
 
 Tipos de título de viewport: `Title w Line` (vistas numeradas) e `SEM TITULO` (vistas de detalhe/legendas).
 

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.7.0-A51C1C?style=flat-square">
+  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.9.0-A51C1C?style=flat-square">
   <img alt="Revit" src="https://img.shields.io/badge/Revit-2025-1E1E1E?style=flat-square">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-mcp--servers--for--revit-1E1E1E?style=flat-square">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1E1E1E?style=flat-square">
@@ -154,7 +154,10 @@ COMPILAR_EXE.cmd
 
 `montar-pacote.ps1` embute a skill, o guia e as fontes no script e o `ps2exe` gera o `InstaladorSkillExecutivoRevit.exe`.
 O `.exe` funciona sem internet para a skill; usa a internet só para instalar o MCP e verificar versões.
-Distribua o `.exe` pela release do GitHub ou pela pasta-base.
+
+**Release no GitHub:** ao publicar uma release, a ação `.github/workflows/instalador.yml` gera o `.exe` com o código daquela
+versão e anexa na release. Também dá para rodar à mão em **Actions › Instalador (.exe) › Run workflow**. Distribua sempre
+o `.exe` da última release (ou um recompilado na pasta-base): um `.exe` antigo leva os defeitos da versão em que foi gerado.
 
 <details>
 <summary><b>Opções do instalador</b></summary>

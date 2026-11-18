@@ -24,8 +24,8 @@ Testada e profundidade saem do modelo (linhas de propriedade ou paredes). Se o c
 (imagem, PDF ou DWG), peça o arquivo: ela é inserida com `05_situacao_importar.cs` e o arquiteto só marca o lote.
 | Pergunta | Parâmetro do script | Observação |
 |---|---|---|
-| Número do lote e quadra | lote, quadra | ex.: 12 / B |
-| Rua da frente | rua da frente | nome completo, ex.: RUA DAS FLORES |
+| Número do lote e quadra | lote, quadra | ex.: 27 / L |
+| Rua da frente | rua da frente | nome completo, ex.: RUA NELSON MAIA |
 | Distância da divisa do lote até a esquina mais próxima (m) | distância | da matrícula ou da planta do loteamento |
 | Nome da rua da esquina e de que lado ela fica, olhando o lote da rua (D/E) | rua da esquina, lado | |
 | Números dos lotes vizinhos (esquerda e direita, olhando da rua) | vizinhos | opcional; sem eles o desenho mostra "—" |

@@ -21,14 +21,21 @@ emitidos 3 PDFs: PROPOSTA (1 folha), ARQ (7 folhas A1) e DET (3 folhas A3).
 | 10 | Vistas do pavimento superior (casa térrea) acusadas | ignoradas quando o pavimento não tem ambientes |
 
 ## Pendências do template master (resolver no master, não na skill)
-1. Apagar as 2 linhas de propriedade e as 2 regiões de área de um lote de exemplo (30 × 8,6 m) que estão no template.
-2. Legenda da implantação com valores fixos de outro projeto — trocar por rótulos ligados aos parâmetros de área.
-3. "Janela Padrão" com 2,50 m de largura e altura — criar tipos usuais (1,20 / 1,50) e marcas no padrão J01…
-4. Tipos de porta com marcas fora do padrão ("40", "1", "P2.1") — padronizar.
+1. ~~Regiões e áreas de exemplo~~ — **resolvido em 18/11/2026** (28 áreas, 69 linhas de limite de área e regiões apagadas). As 2 linhas
+   de propriedade de exemplo foram **mantidas por decisão** (a equipe ajusta o lote e o recuo; a skill confere na abertura).
+2. ~~Legenda da implantação com valores fixos~~ — **resolvido em 18/11/2026**: "A = —" no template, preenchida por `02_areas_legenda.cs`.
+3. ~~"Janela Padrão" 2,50 × 2,50~~ — **resolvido em 18/11/2026**: 1,50 × 1,20 m e peitoril padrão 1,00 m.
+4. ~~Marcas de porta fora do padrão~~ — **resolvido em 18/11/2026**: 13 tipos renumerados para Pnn livres (ver `01_TEMPLATE/LOG_MASTER_v1.md`).
 5. Famílias de porta sem ABERTURA e MATERIAL preenchidos — as tabelas saem com colunas vazias.
 6. Arquivo pesado: o projeto nasce com ~200 MB. Expurgar famílias e vistas não usadas do master.
 7. Vista "PAVIMENTO TERREO PAGINAÇÃO DE PISO" pinta a grama de preto sólido — rever o modelo de vista.
 8. Incluir a hachura e a região do lote criadas pela fase 5, e o logotipo por escritório.
+9. Família "Calçada, Meio-Fio, Rua": a geometria não acompanha os parâmetros (meio-fio e sarjeta fixos em 19 m, rebaixo
+   preso à posição original). A skill não a usa — gera "VZ-Meio-Fio com Rebaixo" (`06_meio_fio.cs`). Corrigir ou remover do master.
+10. Filtro "VZ-GRAMA PREENCHIDA" só pega o tipo "VZ-Acabamento Grama Preenchida": no executivo a grama sai branca. Regra nova
+    (corrigida no projeto teste): tipo contém "Grama" e não contém "Pisograma"/"Concregrama". Aplicar no master.
+11. Nível "CALÇADA" a −1,45 no template: os cortes nascem com uma faixa vazia. A skill ajusta com `05_terra_cortes.cs`.
+12. Recorte da vista "PAVIMENTO TERREO EXECUTIVO" vem desligado (e ancorado em x = −0,43): `06_anotar_planta.cs` liga e ajusta.
 
 ## Continua manual (por decisão)
 Folha de telhado do DET, cotas L/H das esquadrias, textos de especificação das bancadas, ajuste fino de identificadores

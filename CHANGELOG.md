@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.9.0 — 18/11/2026
+Rodada no projeto teste de 2 pavimentos (fases 4 e 5, planta executiva do térreo). Regras novas no SKILL.md e três rotinas novas.
+- **Ordem de trabalho folha por folha:** vistas da folha → anotação completa → conferência por imagem → montagem →
+  aprovação. Cortes, fachadas e perspectivas só depois da planta executiva anotada e aprovada.
+- **Terra nos cortes e nível da calçada** (`05_terra_cortes.cs`, novo): pergunta a cota da calçada em relação ao térreo
+  (ex.: −0,30), move o nível CALÇADA, passa calçada e asfalto para ele, desenha "VZ-Terra" de divisa a divisa entre a calçada
+  e o térreo em todos os cortes e baixa o recorte. Rodar de novo ("refazer") quando criar ou mover corte.
+- **Cotas externas refinadas** (`06_anotar_planta.cs`): recorte da vista ligado e justo às cotas (o do template vinha
+  desligado); divisa prevalece sobre muro a menos de 1 cm; do lado da rua as linhas ficam depois do meio-fio e da sarjeta, com
+  a 1ª linha do **rebaixo**; nas faces perpendiculares à rua a cadeia segue até a guia e mostra a **largura da calçada**; borda
+  de piso dentro da espessura de parede não vira referência; texto de trecho curto sai ao longo da linha para o lado livre;
+  portas para ambientes abertos (varanda, sacada, garagem) contam como vão externo; cota de nível entre o nome e a área.
+- **Projeções no executivo** (`06_projecoes.cs`, novo): paredes do pavimento de cima, borda da laje de cima (PROJEÇÃO PAV.
+  SUPERIOR) e contorno externo da cobertura (PROJEÇÃO COBERTURA / MARQUISE), tracejados, sem os trechos sobre paredes.
+- **Meio-fio e rebaixo** (`06_meio_fio.cs`, novo): a skill gera a família "VZ-Meio-Fio com Rebaixo" com as medidas do lote
+  (guia 10 cm, espelho 15 cm, sarjeta 30 cm, rebaixo ≥ 3,00 m pleno, rampa em trapézio com abas triangulares, material da
+  calçada sem hachura e branco 255,255,254), com planos de referência nomeados para cotar; refaz a laje da calçada com o
+  recorte da rampa, recria a cota de nível e põe o asfalto 15 cm abaixo.
+- **Conferência do modelo:** muros com a face externa na divisa e paredes da casa sem sobrepor os muros (se não couber,
+  perguntar); paredes de cima desalinhadas poucos cm das de baixo → perguntar se alinha; ambientes abertos sem ambiente
+  (varanda) → criar com o nome que o projetista aprovar.
+- **Grama colorida no executivo:** o filtro "VZ-GRAMA PREENCHIDA" passa a pegar todo piso com "Grama" no nome (menos
+  pisograma/concregrama).
+- **Acesso:** símbolos "VZ-Acesso Veículos/Pedestres" na calçada apontando para o lote.
+
+## 0.8.0 — 18/11/2026
+Rodada no projeto teste de 2 pavimentos (fases 0 a 2). Regras novas no SKILL.md e duas rotinas novas.
+- **Ambientes como sugestão** (regra 9): ao receber o modelo e na fase 3, a skill pergunta "Posso colocar/sugerir os nomes
+  dos ambientes?" e só aplica o que o projetista aprovar.
+- **Área do lote pela linha de divisa** (preta tracejada; a azul é recuo), conferida pela geometria; com mais de uma linha,
+  o projetista seleciona a do lote.
+- **Linha de recuo × recuos informados:** tabela por lado e a pergunta "Ajustar a linha de recúo aos valores informados?".
+- **Folha de proposta:** pavimentos na mesma folha quando couber, alinhados um abaixo do outro; cotas internas a 0,20 m da
+  parede; nível do piso entre o nome e a área do ambiente; norte junto à quina da implantação; nome da rua justo à
+  calçada, alinhado ao muro esquerdo, com "RUA POSSUI PAV. ASFÁLTICA" (padrão Família Agra).
+- **Cotas do lote nos 4 lados** (`02_cotas_lote.cs`, novo): frente, laterais e fundos, a 0,40 m da divisa em 1:50 e a 0,50 m
+  em 1:100, nas plantas de layout e nas implantações.
+- **Área construída / ocupada / permeável** (`02_areas_legenda.cs`, novo): construída = face externa das alvenarias do corpo
+  principal (sem muros) + áreas cobertas que avançam mais de 1,5 m do corpo de onde a cobertura sai (entra inteira);
+  ocupada = união das construídas; permeável = piso de grama. Hachura por pavimento sem "dentes", desenhadas de baixo para
+  cima, **legenda atualizada automaticamente** (piscina some da legenda quando não existe) e valores gravados nas
+  Informações do projeto.
+- **Template master (rodada 3):** áreas e linhas de limite do lote de exemplo apagadas (0 avisos), legendas de implantação
+  corrigidas e sem valores fixos, Janela Padrão 1,50 × 1,20 com peitoril 1,00, marcas de porta no padrão Pnn. Backup em
+  `01_TEMPLATE/_backup/`; detalhes em `01_TEMPLATE/LOG_MASTER_v1.md`.
+- `ATUALIZAR_SKILL_TIME.cmd` (novo, na pasta installer): gera o ZIP da skill para enviar no Claude e o instalador .exe do time.
+
 ## 0.7.0 — 17/11/2026
 Aprimoramentos a partir do checklist executivo do escritório. **Regra nova:** recebida a modelagem, a skill faz o
 executivo inteiro. Elementos físicos ela propõe para aprovação, regras de projeto ela corrige com aprovação, e os dados de
@@ -14,6 +61,10 @@ fora do modelo vêm do questionário. `skill/references/checklist-executivo.md` 
 - **Paginação** (`06_textos.cs` modo `paginacao`): piso por ambiente, início da paginação na porta, nota de ralos e canaletas.
 - **Eixos hidrossanitários amarrados** (`06_cotar_pranchas.cs` modo `hidro`).
 - **Questionário**: asfalto, numeração predial, lote de fundos, recuos, lado da garagem, tipo de construção, link do QR code.
+- **Instalador 1.4**: o ZIP da skill é montado pelo nome das pastas (antes, em computadores com o TEMP em nome curto 8.3, o
+  SKILL.md ia para "executivo-revit/<sobra>/SKILL.md" e o Claude recusava); o instalador confere o ZIP e, se precisar,
+  remonta sozinho. `REFAZER_ZIP_SKILL.cmd` corrige ZIPs gerados por instaladores antigos. Ação do GitHub que gera o `.exe`
+  em cada release.
 - **Cotas em três escalas** (`06_anotar_planta.cs`): micro (vãos de portas e janelas da fachada), médio (ambiente por
   ambiente) e macro (total do terreno), por fora do lote e em todas as plantas. A linha de blocos foi substituída pela micro.
 - **Conferência do modelo** (`03_conferir_modelo.cs`): regras de projeto do checklist como ATENÇÃO (peitoril 1,00 m, porta de

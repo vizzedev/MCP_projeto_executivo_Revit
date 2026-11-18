@@ -8,7 +8,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0montar-pacote.ps1" || 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "if (-not (Get-Module -ListAvailable ps2exe)) { if (-not (Get-PackageProvider -ListAvailable NuGet -ErrorAction SilentlyContinue)) { Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null }; Install-Module ps2exe -Scope CurrentUser -Force -AllowClobber };" ^
   "Import-Module ps2exe;" ^
-  "Invoke-ps2exe -inputFile '%~dp0instalar-skill-completo.ps1' -outputFile '%~dp0InstaladorSkillExecutivoRevit.exe' -title 'Skill Executivo Revit - Instalador' -description 'Instala e atualiza a skill do projeto executivo no Revit' -product 'Skill Executivo Revit' -version '1.3.0.0' -noConfigFile -noConsole -STA -DPIAware -iconFile '%~dp0icone.ico'" || goto :erro
+  "Invoke-ps2exe -inputFile '%~dp0instalar-skill-completo.ps1' -outputFile '%~dp0InstaladorSkillExecutivoRevit.exe' -title 'Skill Executivo Revit - Instalador' -description 'Instala e atualiza a skill do projeto executivo no Revit' -product 'Skill Executivo Revit' -version '1.4.0.0' -noConfigFile -noConsole -STA -DPIAware -iconFile '%~dp0icone.ico'" || goto :erro
 rem na pasta do servidor (sem docs\), copia o .exe para a pasta de cima, ao lado do guia
 if not exist "%~dp0..\docs" copy /y "%~dp0InstaladorSkillExecutivoRevit.exe" "%~dp0..\InstaladorSkillExecutivoRevit.exe" >nul
 echo.

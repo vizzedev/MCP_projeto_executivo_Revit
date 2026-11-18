@@ -17,10 +17,15 @@ $nome = "executivo-revit"
 $out = [System.IO.Compression.ZipFile]::Open($Zip, [System.IO.Compression.ZipArchiveMode]::Create)
 $entrada = [System.IO.Compression.ZipFile]::OpenRead($antigo)
 try {
+    # a pasta onde está o SKILL.md vira a raiz "executivo-revit/" (corrige "\" e pastas a mais, ex.: executivo-revit/revit/SKILL.md)
+    $sk = $entrada.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '(^|/)SKILL\.md$' } | Sort-Object { $_.FullName.Length } | Select-Object -First 1
+    if (-not $sk) { throw "SKILL.md não encontrado dentro do ZIP" }
+    $pref = $sk.FullName.Replace('\', '/'); $pref = $pref.Substring(0, $pref.Length - "SKILL.md".Length)
     foreach ($e in $entrada.Entries) {
         if (-not $e.Name) { continue }   # pasta
         $rel = $e.FullName.Replace('\', '/').TrimStart('/')
-        if (-not $rel.StartsWith("$nome/")) { $rel = "$nome/" + ($rel -replace '^[^/]+/', '') }
+        if (-not $rel.StartsWith($pref)) { continue }   # fora da pasta da skill
+        $rel = "$nome/" + $rel.Substring($pref.Length)
         $novo = $out.CreateEntry($rel, [System.IO.Compression.CompressionLevel]::Optimal)
         $s1 = $e.Open(); $s2 = $novo.Open(); $s1.CopyTo($s2); $s2.Dispose(); $s1.Dispose()
     }
