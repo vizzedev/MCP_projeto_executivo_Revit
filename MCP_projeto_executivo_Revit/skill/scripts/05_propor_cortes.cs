@@ -2,7 +2,7 @@
 // send_code_to_revit · transactionMode "none"
 // parameters[0] = prefixo do nome das vistas ("" no uso real; "SKILL " em teste)
 // parameters[1] = nome do modelo de vista de corte (ex.: "VZ-CORTE EXECUTIVO")
-// parameters[2] = nível de referência para os ambientes (ex.: "PAV. TERREO N.A")
+// parameters[2] = nível de referência para os ambientes (ex.: "PAV. TERREO N.A"; vazio = todos os pavimentos)
 // parameters[3] = escala (padrão 75) — o modelo de vista do escritório não controla a escala
 // parameters[4] = trecho do nome do tipo de corte (padrão "CORTE EXECUTIVO"; define o marcador)
 // Regras:
@@ -14,6 +14,7 @@
 var prefixo = (parameters != null && parameters.Length > 0) ? (parameters[0] as string ?? "") : "";
 var nomeModelo = (parameters != null && parameters.Length > 1) ? parameters[1] as string : "VZ-CORTE EXECUTIVO";
 var nomeNivel = (parameters != null && parameters.Length > 2) ? parameters[2] as string : null;
+if (string.IsNullOrWhiteSpace(nomeNivel)) nomeNivel = null;   // vazio = ambientes de todos os pavimentos (casa de mais de um pavimento)
 int escala = (parameters != null && parameters.Length > 3 && !string.IsNullOrWhiteSpace(parameters[3] as string)) ? int.Parse((string)parameters[3]) : 75;
 var trechoTipo = (parameters != null && parameters.Length > 4 && !string.IsNullOrWhiteSpace(parameters[4] as string)) ? (string)parameters[4] : "CORTE EXECUTIVO";
 var log = new System.Text.StringBuilder();

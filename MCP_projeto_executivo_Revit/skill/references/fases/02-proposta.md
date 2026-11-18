@@ -1,6 +1,11 @@
-# Fase 2 — Proposta de layout
+# Fase 2 — Planta de layout (anotação e folha de proposta)
 
-Quando: depois da abertura (fase 1) e da conferência do modelo (fase 3), com o layout modelado (ambientes e mobiliário).
+Quando: depois da fase 1 e da conferência do modelo (fase 3). O layout (ambientes, mobiliário, portas, janelas, pisos) é
+**concebido e modelado pela equipe**; a skill não mexe nele. Ela só anota a planta de layout de cada pavimento e diagrama a folha:
+- nomes dos ambientes (identificador com nome e área, no padrão do escritório);
+- cotas dos ambientes só em texto, sem linha (`06_cotar_pranchas.cs`, modo `layout`, tipo "VZ-Cota Interna");
+- textos de acabamento, quando o padrão da prancha pedir.
+Faltas encontradas (ambiente sem nome, piso sem material) vão para o relatório, para a equipe corrigir.
 É o primeiro material que o cliente vê — tem carimbo próprio ("Proposta Layout"), em faixa na base da folha.
 
 ## Rotina — `scripts/02_proposta.cs`

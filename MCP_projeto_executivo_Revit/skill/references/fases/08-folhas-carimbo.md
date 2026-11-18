@@ -39,3 +39,12 @@ Num projeto novo não há regiões de área desenhadas. O script cria, na implan
 Rode sem `criar` para ver a proposta; o relatório avisa regiões que já existem na vista (no template havia 2 de outro lote,
 que somavam 106 m² a mais). `substituir` apaga todas as regiões de área da vista antes. Depois rode `calcular_areas_indices.cs`.
 Piloto: 40,90 m² construídos, 59,10 m² permeáveis em lote de 100 m² → TO 40,90 %, TP 59,10 %, IA 0,41.
+
+## QR code no carimbo
+1. Com o link do questionário, gere o PNG com Python na pasta do projeto, no computador do usuário (pasta conectada à
+   conversa). Exemplo: `qrcode.make(link).save(r"C:\...\<projeto>\qrcode.png")`; instale com `pip install qrcode[pil]`
+   se faltar.
+2. Rode `08_qrcode.cs` `["<caminho do PNG>", "ARQ;DET", "<dx,dy>", "<lado>"]`. A posição padrão é 35,35 mm do canto
+   inferior direito do carimbo, com 25 mm de lado.
+3. Confira numa folha. Se a posição estiver errada, ajuste e grave em `config/escritorio.json`:
+   `"qrcode": { "dx_mm": …, "dy_mm": …, "lado_mm": … }`. Use `"refazer"` em `parameters[4]` para recolocar.

@@ -60,3 +60,32 @@ Regra: uma linha por ambiente molhado: ampliação → 2 isométricas → 4 vist
 
 ## Posição dos cortes no modelo de referência
 Edifício (paredes) ~40 × 15 m. Transversais A e B a ~21% e ~58% do comprimento; longitudinais C e D a ~68% e ~22% da largura. Profundidade de vista: transversais atravessam todo o comprimento; longitudinais ~4–11 m.
+
+## Casas de mais de um pavimento — plano do caderno
+Os códigos 1/7 … 7/7 acima são **tipos de folha** (o conteúdo). O número de cada folha é dado pelo plano do caderno.
+Regra do escritório: em geral **um pavimento por folha**; se couber, dois pavimentos na mesma folha.
+
+| Tipo | Térrea | Mais de um pavimento |
+|---|---|---|
+| 1/7 executivo | planta + implantação + tabelas de esquadrias | tenta `"TERREO;SUPERIOR"` com `"testar"`; se `NAO_COUBE`, uma folha por pavimento. Implantação e tabelas só na folha do térreo |
+| 2/7 cobertura + situação | uma folha | uma folha (cobertura é única) |
+| 3/7 cortes | uma folha | uma folha (os cortes atravessam todos os pavimentos; se não couber, divida A/B e C/D) |
+| 4/7 fachadas | uma folha | uma folha |
+| 5/7 iluminação e tomadas | uma folha | tenta os pavimentos juntos com `"testar"`; senão uma por pavimento. Tabela luminotécnica só na do térreo |
+| 6/7 forro + vistas de iluminação | uma folha | uma por pavimento (só as vistas daquele pavimento) |
+| 7/7 paginação | uma folha | uma por pavimento (só os conjuntos daquele pavimento) |
+
+Como montar:
+1. Para cada tipo que admite pavimentos juntos (1/7 e 5/7), rode `05_montar_folhas_gerais.cs` com
+   `[tipo, "TESTE", prefixo, "TERREO;SUPERIOR", "", "testar"]`. A 1ª linha do retorno é `COUBE` ou `NAO_COUBE`; nada é gravado.
+2. Com as decisões, conte as folhas (N) e numere na ordem: executivo(s) → cobertura → cortes → fachadas →
+   iluminação e tomadas → forro(s) → paginação(ões). Ex.: sobrado com tudo separado = 10 folhas (01/10 … 10/10).
+3. Monte cada folha com o número definitivo (`"01/10"` …). O nome da folha vira "PRANCHA 01" … e o conteúdo do carimbo ganha
+   " - PAVIMENTO X" quando o modelo tem mais de um pavimento.
+4. A conferência final (`10_conferencia_final.cs`) confere a sequência i/N.
+
+## Folhas complementares (checklist executivo)
+Quando a equipe modelou os pontos, entram depois da folha de iluminação e tomadas, nesta ordem: **ar-condicionado** (`ar`),
+**hidro e gás** (`hidro`), **iluminação externa** (`ilumext`, só o pavimento mais baixo). Monte com `05_montar_folhas_gerais.cs`
+`[tipo, número, prefixo, pavimentos]`. Uma folha por pavimento, ou dois juntos se `"testar"` devolver `COUBE`. Elas contam no N
+da numeração i/N.

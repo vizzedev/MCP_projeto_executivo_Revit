@@ -89,8 +89,10 @@ plano ou fora de ambiente é avisada e não cotada. Vista que já tem cota linea
   "VZ-Cota Interna" (ordenada) põe o texto na ponta — confirmar qual é o tipo de layout do escritório.
 
 ### Padrão do projeto de referência (análise das pranchas ARQ)
-- Executivo: 3 linhas por face, por fora do lote — detalhada (paredes, pisos e paisagismo; sem vãos)
-  a 5 mm do desenho, blocos (divisas, muros, extremos da edificação) e total, a cada 6,5 mm.
+- Executivo: 3 linhas por face, por fora do lote — **regra atual (checklist executivo): três escalas**:
+  micro (vãos de portas e janelas da fachada + extremos da edificação) a 5 mm do desenho, médio (ambiente por ambiente:
+  paredes e pisos, sem ombreiras) e macro (total do terreno), a cada 6,5 mm. A linha de blocos (divisas, muros) da
+  referência foi substituída pela micro. Sem vão externo na face, a micro não é criada.
   Dimensões dos ambientes só em texto no canto ("VZ-Cota Interna"). Regra do escritório: nenhuma
   cadeia atravessando os ambientes (a referência ainda tinha — foi descartado).
 - Cortes: cadeia vertical por ambiente (2,70 | 0,50 | 0,62 na referência) + altura total.
@@ -123,3 +125,49 @@ NATURAL DO TERRENO". Para automatizar, a especificação precisa entrar no model
 
 Piloto: cortes A–D com telha/laje/forro + REVEST./PISO; 4 fachadas com TELHA METÁLICA e REBOCO; forro com 4 alturas;
 bancadas B02/B03 com cuba e material; tomadas sem rótulo (todas nas alturas padrão).
+
+## Vários pavimentos
+- **Cotas externas** (`06_anotar_planta.cs`, `cotas_externas`) valem em todos os pavimentos, pela mesma regra: 3 linhas por fora dos
+  muros, de divisa a divisa. O lote (divisas e muros) vem do térreo; a cadeia detalhada e os extremos da edificação vêm do
+  pavimento da vista. Muro = parede do térreo até 3 m que não delimita ambiente interno (ou tipo com "MURO" no nome).
+- No **pavimento superior** os muros e as divisas só entram na cota se aparecerem na vista. Deixe as linhas de propriedade
+  visíveis ou use o térreo como subposição; senão o relatório avisa e a cadeia fica só na edificação.
+- **Cortes** (`06_cotar_pranchas.cs`, modo `corte`): cada ambiente cortado tem a cadeia do piso acabado até a laje logo acima
+  (com a espessura dela); o que fica acima é do ambiente de cima. À esquerda, uma linha com o piso acabado de cada pavimento e o
+  topo (pé-direito por pavimento + total).
+- **Textos** (`06_textos.cs`): tomadas, iluminação e forro por planta de cada pavimento; nos cortes, REVEST. e PISO em cada
+  ambiente cortado de todos os pavimentos; LAJE entre pavimentos aparece como chamada.
+- **Escada:** sem cotas nem detalhe próprio (fora do escopo).
+
+## Checklist executivo (novidades da 0.7)
+- `06_anotar_planta.cs`:
+  - cotas externas em três escalas (micro, médio, macro), descritas acima;
+  - identificador de ambiente com perímetro: usa o tipo com "PERÍMETRO" no nome, se o template tiver; senão avisa;
+  - `paisagismo` (padrão): esconde Plantação e Entorno nas plantas que não são de layout. Se o modelo de vista controla as
+    categorias, só avisa (corrija no modelo de vista).
+- `06_textos.cs`:
+  - executivo: "PROJEÇÃO PERGOLADO" em cada pergolado ("PERGOL" no nome) e X tracejado nos vazios ("VAZIO", "PÉ DIREITO
+    DUPLO", "POÇO"). Ao refazer, apague antes os X antigos (linhas de detalhe não são apagadas pelo `refazer`);
+  - tomadas: alturas padrão 0,30 / 0,70 / 1,10 / 1,40 / 2,20 m;
+  - iluminação: luminária de parede ou prateleira sempre com a altura;
+  - modos novos `ar` (BTU/h e modelo; distância evaporadora–condensadora em linha reta) e `hidro` (torneiras, água
+    quente/fria, gás e nichos com chamada e altura).
+
+## Executivo completo (checklist, etapa 1)
+1. **Implantação** — `06_implantacao.cs` com os dados do questionário:
+   `["rua=RUA DAS FLORES;largura=12;asfalto=sim;numero=123;lote_esq=11;lote_dir=13;recuo_frente=4;recuo_lateral=1.5;recuo_fundo=2"]`.
+   - Escreve a rua, a largura, a pavimentação, os lotes vizinhos, o número e o norte.
+   - Desenha os recuos em azul tracejado (estilo "VZ-RECUO") na implantação e no executivo do térreo.
+   - `"refazer"` em `parameters[1]` gera de novo.
+2. **Elementos externos** — `06_elementos_externos.cs`:
+   - `["propor"]` insere abrigo de medidores, gás, caixa de captação (1,5 m), lixeira, rebaixo do meio-fio, ducha (com
+     piscina) e faixa de piso tátil, marcados como "SKILL: proposta".
+   - Mostre a imagem da implantação ao arquiteto. Depois rode `["aprovar"]` (ele pode ajustar no Revit antes) ou
+     `["desfazer"]`.
+   - Família que não estiver carregada vira aviso: peça para carregar e rode `["propor","<item>"]`.
+3. **Eixos hidrossanitários** — `06_cotar_pranchas.cs` modo `hidro`: cadeia parede → eixo da louça → parede, na planta de
+   hidro e gás (ou na executiva, se não houver).
+4. **Paginação** — `06_textos.cs` modo `paginacao` (automático pelo nome da vista):
+   - "PISO <acabamento>" em cada ambiente;
+   - "INÍCIO DA PAGINAÇÃO" na porta principal;
+   - nota de ralos e, se houver piso com "CANALETA", a nota das canaletas.

@@ -4,11 +4,14 @@
 //   executivo   — fica no 06_anotar_planta.cs (cadeia integrada + total do lote por fora dos muros, nas 4 faces)
 //   layout      — medidas internas de cada ambiente (largura e comprimento), tipo de cota só com texto
 //   tomadas     — ao longo de cada parede com tomada: limite da parede → tomada → tomada → limite da parede
+//   hidro       — eixos hidrossanitários amarrados (checklist): ao longo de cada parede com louça/ponto hidráulico,
+//                 limite da parede → eixo da peça → eixo da peça → limite da parede (planta de hidro e gás ou executivo)
 //   iluminacao  — por ambiente, eixo e fileira: parede → luminária → luminária → parede, com a linha passando pela fileira; linear pelas pontas
 //   cobertura   — por fora, nas 4 faces: contorno do telhado com corpo × beiral (faces externas da edificação) + total
-//   corte       — só na vertical: uma cadeia por ambiente cortado (piso acabado → forro → laje → cobertura) + altura total à esquerda
+//   corte       — só na vertical: uma cadeia por ambiente cortado (piso acabado → forro → laje acima dele, com a espessura)
+//                 + linha à esquerda com o piso acabado de cada pavimento e o topo (pé-direito por pavimento + total)
 // parameters[0] = vistas separadas por ";" (obrigatório)
-// parameters[1] = modo: auto (padrão) | layout | tomadas | iluminacao | cobertura | corte
+// parameters[1] = modo: auto (padrão) | layout | tomadas | hidro | iluminacao | cobertura | corte
 //                 auto = pelo nome do modelo de vista e da vista (LAYOUT, TOMADA/PONTOS ELÉTRICOS, ILUMINAÇÃO/LUMINOTÉCNICO, COBERTURA, corte)
 // parameters[2] = "refazer" apaga as cotas lineares da vista antes (sem isso, vista que já tem cota linear é pulada)
 // parameters[3] = nome do tipo de cota (opcional; padrão: layout "VZ-Cota Interna", demais "VZ-Cota 1-<escala mais próxima>")
@@ -28,6 +31,7 @@ Func<View, string> Modo = v => {
     var tn = v.ViewTemplateId != ElementId.InvalidElementId ? SemAcento(document.GetElement(v.ViewTemplateId).Name) : ""; var n = SemAcento(v.Name) + " " + tn;
     if (v.ViewType == ViewType.Section) return "corte";
     if (n.Contains("LAYOUT") || n.Contains("SETORIZA")) return "layout";
+    if (n.Contains("HIDRO")) return "hidro";
     if (n.Contains("TOMADA") || n.Contains("PONTOS ELETRICOS")) return "tomadas";
     if (n.Contains("ILUMINA") || n.Contains("LUMINOTEC")) return "iluminacao";
     if (n.Contains("COBERTURA")) return "cobertura";
@@ -123,8 +127,8 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
                 }
             }
         }
-        else if (modo == "tomadas" || modo == "iluminacao") {
-            var cat = modo == "tomadas" ? BuiltInCategory.OST_ElectricalFixtures : BuiltInCategory.OST_LightingFixtures;
+        else if (modo == "tomadas" || modo == "iluminacao" || modo == "hidro") {
+            var cat = modo == "tomadas" ? BuiltInCategory.OST_ElectricalFixtures : modo == "hidro" ? BuiltInCategory.OST_PlumbingFixtures : BuiltInCategory.OST_LightingFixtures;
             var pecas = new FilteredElementCollector(document, vista.Id).OfCategory(cat).WhereElementIsNotElementType().OfType<FamilyInstance>().ToList();
             if (modo == "tomadas") pecas.AddRange(new FilteredElementCollector(document, vista.Id).OfCategory(BuiltInCategory.OST_LightingDevices).WhereElementIsNotElementType().OfType<FamilyInstance>());   // interruptores
             Func<FamilyInstance, XYZ> Pt = fi => (fi.Location as LocationPoint)?.Point;
@@ -132,7 +136,7 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
                 return rooms.FirstOrDefault(r => r.IsPointInRoom(new XYZ(p.X, p.Y, z + F(1.0)))) ?? rooms.FirstOrDefault(r => r.IsPointInRoom(new XYZ(p.X - fi.FacingOrientation.X * F(0.1), p.Y - fi.FacingOrientation.Y * F(0.1), z + F(1.0))))
                     ?? rooms.FirstOrDefault(r => r.IsPointInRoom(new XYZ(p.X + fi.FacingOrientation.X * F(0.1), p.Y + fi.FacingOrientation.Y * F(0.1), z + F(1.0)))); };
             int semAmb = 0;
-            if (modo == "tomadas") {
+            if (modo == "tomadas" || modo == "hidro") {
                 // agrupa por ambiente + parede (direção da face): uma cadeia por trecho de parede com tomadas
                 var grupos = pecas.Where(fi => Pt(fi) != null).GroupBy(fi => { var r = Amb(fi); var f = fi.FacingOrientation; return (r == null ? "-" : r.Id.ToString()) + "|" + Math.Round(f.X, 2) + "|" + Math.Round(f.Y, 2) + "|" + Math.Round(Coord(Pt(fi), new XYZ(f.X, f.Y, 0).Normalize()) * 0.3048 * 10) ; });
                 foreach (var g in grupos) {
@@ -245,15 +249,15 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
             Func<double, XYZ> PtH = h => dirH.Multiply(h) + vs.ViewDirection.Multiply(prof);
             // uma cadeia vertical por ambiente cortado (padrão da referência: piso → forro → laje → topo), encostada na parede esquerda do ambiente
             var todosAmb = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().Cast<Autodesk.Revit.DB.Architecture.Room>().Where(r => r.Area > 0).ToList();
-            var faces = new List<Tuple<PlanarFace, Reference, BuiltInCategory>>();
+            var faces = new List<Tuple<PlanarFace, Reference, BuiltInCategory, ElementId>>();
             foreach (var cat in cats) foreach (var el in new FilteredElementCollector(document, vista.Id).OfCategory(cat).WhereElementIsNotElementType()) {
                 GeometryElement ge; try { ge = el.get_Geometry(go); } catch { continue; } if (ge == null) continue;
                 foreach (var gobj in ge) { var so = gobj as Solid; if (so == null) continue;
                     foreach (Face fc in so.Faces) { var pf = fc as PlanarFace; if (pf == null || pf.Reference == null || Math.Abs(pf.FaceNormal.Z) < 0.999) continue;
                         if (cat == BuiltInCategory.OST_Ceilings && pf.FaceNormal.Z > 0) continue;   // forro: só a face de baixo (a espessura do forro não é cotada)
-                        faces.Add(Tuple.Create(pf, pf.Reference, cat)); } }
+                        faces.Add(Tuple.Create(pf, pf.Reference, cat, el.Id)); } }
             }
-            int nAmb = 0; var pendentes = new List<Tuple<List<Reference>, Line>>();
+            int nAmb = 0; var pendentes = new List<Tuple<List<Reference>, Line>>(); var pisosPav = new List<Tuple<double, Reference>>();
             foreach (var amb in todosAmb) {
                 var bbA = amb.get_BoundingBox(null); if (bbA == null) continue;
                 double hA = Math.Min(bbA.Min.DotProduct(dirH), bbA.Max.DotProduct(dirH)), hB = Math.Max(bbA.Min.DotProduct(dirH), bbA.Max.DotProduct(dirH));
@@ -261,11 +265,19 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
                 for (double h = hA + F(0.30); h < hB; h += F(0.20)) { var q = PtH(h); var q3 = new XYZ(q.X, q.Y, zl + F(1.0)); if (amb.IsPointInRoom(q3)) { pt = q3; hUsado = h; break; } }
                 if (pt == null) continue;   // o corte não passa por este ambiente
                 var lst = new List<Tuple<double, Reference>>(); double pisoTopo = double.MinValue; Reference pisoRef = null;
+                var acima = new List<Tuple<double, Reference, BuiltInCategory, ElementId>>();
                 foreach (var f in faces) { var pr = f.Item1.Project(new XYZ(pt.X, pt.Y, f.Item1.Origin.Z)); if (pr == null || pr.Distance > F(0.002)) continue;
                     double fz = f.Item1.Origin.Z;
                     if (fz <= zl + F(0.30)) { if (f.Item3 == BuiltInCategory.OST_Floors && f.Item1.FaceNormal.Z > 0 && fz > pisoTopo) { pisoTopo = fz; pisoRef = f.Item2; } continue; }   // abaixo: só o piso acabado
-                    lst.Add(Tuple.Create(fz, f.Item2)); }
-                if (pisoRef == null) continue; lst.Add(Tuple.Create(pisoTopo, pisoRef));
+                    acima.Add(Tuple.Create(fz, f.Item2, f.Item3, f.Item4)); }
+                if (pisoRef == null) continue;
+                // vários pavimentos: a cadeia do ambiente para na laje (ou telhado) logo acima dele, incluindo a espessura dela;
+                // o que fica acima pertence à cadeia do ambiente do pavimento de cima
+                acima = acima.OrderBy(q => q.Item1).ToList();
+                var laje = acima.FirstOrDefault(q => q.Item3 == BuiltInCategory.OST_Floors || q.Item3 == BuiltInCategory.OST_Roofs);
+                double zCorte = laje != null ? acima.Where(q => q.Item4 == laje.Item4).Max(q => q.Item1) : double.MaxValue;
+                foreach (var qa in acima) if (qa.Item1 <= zCorte + F(0.002)) lst.Add(Tuple.Create(qa.Item1, qa.Item2));
+                lst.Add(Tuple.Create(pisoTopo, pisoRef)); pisosPav.Add(Tuple.Create(pisoTopo, pisoRef));
                 var cad = Limpa(lst); if (cad.Count < 2) continue;
                 var bse = PtH(hUsado); pendentes.Add(Tuple.Create(cad.Select(q => q.Item2).ToList(), Line.CreateBound(new XYZ(bse.X, bse.Y, cad[0].Item1), new XYZ(bse.X, bse.Y, cad[cad.Count - 1].Item1)))); nAmb++;
             }
@@ -279,7 +291,13 @@ using (var t = new Transaction(document, "Skill: cotar pranchas")) {
                     if (bbs.Count > 0) orig = dirH.Multiply(bbs.Min(b => Math.Min(b.Min.DotProduct(dirH), b.Max.DotProduct(dirH)))); }
                 var bse = PtH(orig.DotProduct(dirH) - F(0.3) - o2);
                 var piso0 = tot.Where(q => q.Item1 < tot[0].Item1 + F(0.30)).Last();   // piso acabado (face mais alta das camadas do piso térreo)
-                Cotar(new List<Reference> { piso0.Item2, tot[tot.Count - 1].Item2 }, Line.CreateBound(new XYZ(bse.X, bse.Y, piso0.Item1), new XYZ(bse.X, bse.Y, tot[tot.Count - 1].Item1)));
+                // vários pavimentos: piso acabado de cada pavimento cortado entra na linha total (pé-direito por pavimento + total)
+                var refsTot = new List<Reference> { piso0.Item2 };
+                double zAnt = piso0.Item1;
+                foreach (var pp in pisosPav.OrderBy(q => q.Item1)) if (pp.Item1 > zAnt + F(1.0) && pp.Item1 < tot[tot.Count - 1].Item1 - F(0.5)) { refsTot.Add(pp.Item2); zAnt = pp.Item1; }
+                refsTot.Add(tot[tot.Count - 1].Item2);
+                Cotar(refsTot, Line.CreateBound(new XYZ(bse.X, bse.Y, piso0.Item1), new XYZ(bse.X, bse.Y, tot[tot.Count - 1].Item1)));
+                if (refsTot.Count > 2) log.AppendLine(nome + ": linha total com " + (refsTot.Count - 2) + " pavimento(s) acima do térreo");
             }
         }
         else { log.AppendLine(nome + ": modo \"" + modo + "\" desconhecido"); continue; }

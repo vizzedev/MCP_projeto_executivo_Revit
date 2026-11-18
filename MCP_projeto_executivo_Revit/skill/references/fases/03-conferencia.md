@@ -18,7 +18,9 @@ A coluna ID das tabelas de portas e janelas é a **marca de tipo** (P01, J01…)
 Apresente o relatório em linguagem simples: primeiro os bloqueios, depois o que corrigir, depois a atenção.
 Para cada bloqueio, diga o que fazer (ex.: "crie o ambiente CALÇADA na faixa da frente").
 
-## 3. Corrigir — `scripts/03_corrigir_modelo.cs` (só com confirmação)
+## 3. Corrigir — `scripts/03_corrigir_modelo.cs` (só se a equipe pedir)
+Por padrão a skill **não corrige a modelagem**: entrega o relatório e a equipe corrige no modelo. Use este script só quando
+a equipe pedir explicitamente.
 Correções seguras, numa transação só (Ctrl+Z desfaz), sem salvar:
 - `ambientes_nao_colocados` — apaga ambientes sem localização.
 - `paredes_curtas` — apaga paredes com menos de 5 cm que não hospedam portas/janelas.
@@ -36,3 +38,21 @@ agrupados em 8 tipos; vínculo de interiores descarregado apontado.
 - Marcas de tipo fora do padrão (ex.: "40", "J24") aparecem como ATENÇÃO. `03_corrigir_modelo.cs` com `renumerar_esquadrias`
   renumera P01, P02… e J01, J02… (da maior largura para a menor; só tipos usados no modelo).
 - O template master trazia 2 linhas de propriedade e 2 regiões de área de um lote de exemplo — confira e apague no início do projeto.
+
+## Regras de projeto do checklist executivo (ATENÇÃO)
+A conferência também mede no modelo as regras do checklist (seção 2) e lista o que foge delas, para a equipe decidir:
+peitoril de janela 1,00 m (fora banheiros e lavabos) · porta de entrada ≥ 1,30 m e pivotante · porta de lavabo ≥ 0,70 m ·
+porta de alumínio em corredor ≥ 0,90 m · garagem 3,00 × 5,00 m · bancadas (cozinha 0,70 m de profundidade e 0,90/0,95 m de
+altura, ilha ≥ 0,90 m, lavabo 0,55 m, lavanderia 0,60 m) · churrasqueira 1,10 × 0,80–0,90 m · topografia modelada.
+As que dependem de mobiliário ou de circulação (sofá, mesa, lavanderia) ficam com a equipe
+(`references/checklist-executivo.md`).
+
+### Correção das regras (depois da aprovação)
+Mostre a lista "REGRAS DE PROJETO" ao arquiteto. Com o que ele aprovar, rode `03_corrigir_modelo.cs`:
+- `["peitoril"]` → janelas (fora banheiros e lavabos) para 1,00 m;
+- `["portas_largura"]` → troca pelo tipo da mesma família com a largura mínima (entrada 1,30; lavabo 0,70; alumínio em
+  corredor 0,90). Família sem esse tipo: avisa;
+- `["bancadas"]` → ajusta profundidade, altura e largura pelos parâmetros da família. Tipo usado por outras peças é
+  duplicado antes.
+
+Para corrigir só parte da lista, passe os ids aprovados em `parameters[1]` (`"123,456"`). Tudo numa transação (Ctrl+Z desfaz).

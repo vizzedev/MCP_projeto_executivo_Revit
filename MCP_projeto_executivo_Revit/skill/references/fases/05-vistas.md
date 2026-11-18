@@ -98,3 +98,22 @@ Fora do escopo automático (fica com o arquiteto): cotas, identificadores de mat
 quando: cabem na largura útil (até 832 mm), cada coluna cabe acima das tabelas, a coluna da direita não desce à faixa
 do carimbo e o empilhado ficaria apertado ou as vistas são estreitas (< 420 mm). Piloto: 1/7, 2/7 e 5/7 em duas colunas.
 `parameters[4] = "empilhar"` mantém o empilhado.
+
+## Vários pavimentos
+- `05_plantas.cs` já cria executivo, tomadas, iluminação, forro e paginação para cada "PAV. X N.A" com ambientes.
+- `05_propor_cortes.cs`: passe o nível vazio (`""`) para considerar os ambientes de todos os pavimentos.
+- Pranchas: siga o plano do caderno em `references/gabarito-folhas.md` (um pavimento por folha; dois se couber, decidido com
+  `"testar"`), e numere i/N pela quantidade final de folhas.
+- `05_montar_folhas_ambientes.cs` (6/7 e 7/7) usa só as vistas do pavimento da planta geral informada: rode uma vez por pavimento.
+
+## Plantas complementares (checklist executivo)
+`05_plantas.cs` cria, só nos pavimentos onde a equipe modelou os pontos:
+- **AR CONDICIONADO**: equipamentos mecânicos;
+- **HIDRO E GÁS**: peças hidráulicas e acessórios de tubulação;
+- **ILUMINAÇÃO EXTERNA**: no pavimento mais baixo, luminárias fora dos ambientes internos.
+
+O modelo de vista é o do escritório com esse nome (ex.: "VZ-PLANTA BAIXA AR CONDICIONADO"). Sem ele, a skill usa o da planta
+executiva ou o de pontos elétricos e avisa no relatório.
+
+Folhas: `05_montar_folhas_gerais.cs` com o tipo `ar`, `hidro` ou `ilumext` e os pavimentos em `parameters[3]`. Entram no plano
+do caderno depois da folha de iluminação e tomadas, uma por pavimento (ou juntos, se couber: teste com `"testar"`).

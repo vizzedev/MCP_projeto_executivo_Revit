@@ -1,14 +1,27 @@
 // SKILL EXECUTIVO REVIT — Fase 6: anotações de texto das pranchas, no padrão do projeto de referência
 // send_code_to_revit · transactionMode "none"
 // O que a referência anota, por prancha, e o que este script gera a partir do modelo:
-//   executivo  — "PROJEÇÃO COBERTURA" sobre a projeção do telhado
+//   executivo  — "PROJEÇÃO COBERTURA" sobre a projeção do telhado; "PROJEÇÃO PERGOLADO" em cada pergolado (checklist:
+//                nome da projeção nos pergolados e beirais); X tracejado nos vazios de volumetria (ambientes "VAZIO",
+//                "PÉ DIREITO DUPLO", "POÇO") com linha de detalhe tracejada
 //   cobertura  — tipo da telha + inclinação ("TELHA METÁLICA  i = 10%") no centro de cada água; "PROJEÇÃO EDIFICAÇÃO"
 //   corte      — chamadas com linha de chamada (vermelho) dos elementos cortados: telha, laje, forro, pingadeira (nome do
 //                tipo); em cada ambiente cortado: "REVEST. <acabamento da parede>" e "PISO <acabamento do piso>"
 //   fachada    — chamadas dos materiais de acabamento externo das paredes vistas e do telhado
 //   forro      — "FORRO= 2,80m" sob o nome de cada ambiente (altura do forro sobre o piso)
 //   tomadas / iluminacao — rótulo com linha de chamada nas peças que fogem do padrão da legenda: altura diferente de
-//                0,30 / 1,10 / 2,20 m ("Tomada h= 70cm") ou com Comentários preenchidos ("Ponto p/ geladeira h= 1,10m")
+//                0,30 / 0,70 / 1,10 / 1,40 / 2,20 m ("Tomada h= 90cm") ou com Comentários preenchidos ("Ponto p/ geladeira h= 1,10m");
+//                na iluminação, toda luminária de parede ou prateleira (hospedada em parede ou "ARANDELA", "PAREDE",
+//                "PRATELEIRA", "BALIZADOR" no nome) ganha a altura ("ARANDELA h= 1,80m")
+//   ar         — planta de ar-condicionado: em cada equipamento, "<BTU> BTU/h · <modelo>" (parâmetros com "BTU" e
+//                "Modelo"; senão o tipo); entre cada evaporadora e a condensadora mais próxima, a distância em linha reta
+//                ("DIST. EVAP./COND. ≈ 6,40m") — o trajeto real das linhas fica com o projeto do instalador
+//   hidro      — planta de hidro e gás: torneiras, pontos de água quente/fria, gás e nichos técnicos com linha de chamada
+//                e altura ("TORNEIRA DE PAREDE h= 1,10m"; "ÁGUA QUENTE"/"ÁGUA FRIA" e "PONTO DE GÁS" pelo nome da peça)
+//   paginacao  — planta de paginação: em cada ambiente, "PISO <acabamento>" no centro e "INÍCIO DA PAGINAÇÃO" com linha de
+//                chamada na porta principal (banheiros iniciam na porta — checklist); nota geral "RALOS CONFORME PROJETO
+//                HIDROSSANITÁRIO" acima do desenho; nas áreas externas, "CANALETA DE CONCRETO P/ ÁGUA ENTRE REJUNTES"
+//                quando o piso externo tiver "CANALETA" no nome do tipo
 //   bancada    — vista de montagem da bancada (DET): chamadas das louças/metais (família + tipo + fabricante) e do material
 //                da bancada; nota "Medidas livres, não considerado 2cm embutimento." (padrão da referência)
 // Fonte dos textos: nome do tipo (sem o prefixo "VZ-"/"Acabamento"), parâmetros "Acabamento do piso/da parede" do
@@ -43,8 +56,11 @@ Func<View, string> Modo = v => {
     if (v.IsAssemblyView && v.ViewType != ViewType.ThreeD && Math.Abs(v.ViewDirection.Z) < 0.1 && document.GetElement(v.AssociatedAssemblyInstanceId) is AssemblyInstance ai && ai.GetMemberIds().Any(i => document.GetElement(i)?.Category?.Id.Value == (long)BuiltInCategory.OST_Casework)) return "bancada";
     if (v.ViewType == ViewType.Section) return "corte";
     if (v.ViewType == ViewType.Elevation && n.Contains("FACHADA")) return "fachada";
+    if (n.Contains("AR CONDICIONADO") || n.Contains("AR-CONDICIONADO") || n.Contains("CLIMATIZA")) return "ar";
+    if (n.Contains("HIDRO") || n.Contains(" GAS")) return "hidro";
     if (n.Contains("TOMADA") || n.Contains("PONTOS ELETRICOS")) return "tomadas";
     if (n.Contains("ILUMINA") || n.Contains("LUMINOTEC")) return "iluminacao";
+    if (n.Contains("PAGINA")) return "paginacao";
     if (v.ViewType == ViewType.CeilingPlan || n.Contains("FORRO")) return "forro";
     if (n.Contains("COBERTURA")) return "cobertura";
     if (n.Contains("EXECUTIVO")) return "executivo";
@@ -88,6 +104,7 @@ using (var t = new Transaction(document, "Skill: textos")) {
         var modo = Modo(vista); if (modo == "") { log.AppendLine(nome + ": modo não reconhecido (informe em parameters[1])"); continue; }
         double esc = vista.Scale; Func<double, double> Pap = mm => F(mm / 1000.0 * esc);   // mm no papel → pés no modelo
         var existentes = new FilteredElementCollector(document, vista.Id).OfClass(typeof(TextNote)).Cast<TextNote>().Where(x => x.GetTypeId() == tChamada.Id || x.Text.StartsWith("FORRO=") || x.Text.StartsWith("PROJEÇÃO ") || x.Text.StartsWith("Medidas livres")
+            || (modo == "paginacao" && (x.Text.StartsWith("PISO ") || x.Text.StartsWith("RALOS CONFORME") || x.Text.StartsWith("ÁREAS EXTERNAS: CANALETA")))
             || (modo == "corte" && x.GetTypeId() == tNota.Id && (x.Text.StartsWith("REVEST. ") || x.Text.StartsWith("PISO "))) || (modo == "cobertura" && x.GetTypeId() == tNota.Id && x.Text.Contains("i = "))).ToList();
         if (existentes.Count > 0) { if (refazer) document.Delete(existentes.Select(x => x.Id).ToList()); else { log.AppendLine(nome + " [" + modo + "]: já tem " + existentes.Count + " anotações da skill — pulada (use \"refazer\")"); continue; } }
         int n = 0; var avisos = new List<string>();
@@ -106,6 +123,23 @@ using (var t = new Transaction(document, "Skill: textos")) {
                 foreach (var r in tel) { var b = r.get_BoundingBox(null); if (b == null) continue;
                     Texto("PROJEÇÃO COBERTURA", new XYZ((b.Min.X + b.Max.X) / 2, b.Max.Y - Pap(1.5), z), optC); }
                 if (tel.Count == 0) avisos.Add("sem telhado: \"PROJEÇÃO COBERTURA\" não colocada");
+                // pergolados: qualquer elemento com "PERGOL" na família ou no tipo
+                foreach (var bc in new[] { BuiltInCategory.OST_GenericModel, BuiltInCategory.OST_StructuralFraming, BuiltInCategory.OST_Roofs, BuiltInCategory.OST_SpecialityEquipment, BuiltInCategory.OST_Site })
+                    foreach (var el in new FilteredElementCollector(document).OfCategory(bc).WhereElementIsNotElementType()) {
+                        var tp = document.GetElement(el.GetTypeId()) as ElementType; var nmP = SemAcento(((tp as FamilySymbol)?.FamilyName ?? "") + " " + (tp?.Name ?? ""));
+                        if (!nmP.Contains("PERGOL")) continue; var b = el.get_BoundingBox(null); if (b == null) continue;
+                        Texto("PROJEÇÃO PERGOLADO", new XYZ((b.Min.X + b.Max.X) / 2, (b.Min.Y + b.Max.Y) / 2, z), optC); }
+                // vazios de volumetria (pé-direito duplo, poço): X em linha tracejada sobre o ambiente
+                var estiloTr = new FilteredElementCollector(document).OfClass(typeof(GraphicsStyle)).Cast<GraphicsStyle>()
+                    .Where(gs => gs.GraphicsStyleCategory != null && gs.GraphicsStyleCategory.Parent != null && gs.GraphicsStyleCategory.Parent.Id.Value == (long)BuiltInCategory.OST_Lines)
+                    .OrderBy(gs => { var nn = SemAcento(gs.Name); return nn.Contains("TRACEJ") ? 0 : nn.Contains("OCULT") || nn.Contains("HIDDEN") || nn.Contains("DASH") ? 1 : 9; }).FirstOrDefault();
+                foreach (var r in rooms.Where(x => { var nn = SemAcento(NomeAmb(x)); return nn.Contains("VAZIO") || nn.Contains("PE DIREITO DUPLO") || nn.Contains("PE-DIREITO DUPLO") || nn.Contains("POCO"); })) {
+                    if (nivel == null || r.Level == null || r.Level.Elevation > nivel.Elevation + F(0.5)) continue;   // vazio aparece no pavimento dele e nos de cima
+                    var b = r.get_BoundingBox(null); if (b == null) continue;
+                    foreach (var ln in new[] { Line.CreateBound(new XYZ(b.Min.X, b.Min.Y, z), new XYZ(b.Max.X, b.Max.Y, z)), Line.CreateBound(new XYZ(b.Min.X, b.Max.Y, z), new XYZ(b.Max.X, b.Min.Y, z)) }) {
+                        try { var dc = document.Create.NewDetailCurve(vista, ln); if (estiloTr != null) dc.LineStyle = estiloTr; n++; } catch (Exception ex) { avisos.Add("X do vazio " + NomeAmb(r) + ": " + ex.Message); } }
+                    if (estiloTr == null || !SemAcento(estiloTr.Name).Contains("TRACEJ")) avisos.Add("X do vazio " + NomeAmb(r) + ": sem estilo de linha \"tracejado\" no modelo — confira o estilo");
+                }
             } else {
                 foreach (var r in tel) { var b = r.get_BoundingBox(null); if (b == null) continue;
                     var fp = r as FootPrintRoof; string incl = "";
@@ -126,7 +160,7 @@ using (var t = new Transaction(document, "Skill: textos")) {
         }
         else if (modo == "tomadas" || modo == "iluminacao") {
             var cats = modo == "tomadas" ? new[] { BuiltInCategory.OST_ElectricalFixtures, BuiltInCategory.OST_LightingDevices, BuiltInCategory.OST_ElectricalEquipment } : new[] { BuiltInCategory.OST_LightingFixtures };
-            var padrao = new[] { 0.30, 1.10, 2.20 }; var jaRot = new HashSet<string>();
+            var padrao = new[] { 0.30, 0.70, 1.10, 1.40, 2.20 }; var jaRot = new HashSet<string>();
             foreach (var c in cats) foreach (var fi in new FilteredElementCollector(document, vista.Id).OfCategory(c).WhereElementIsNotElementType().OfType<FamilyInstance>()) {
                 var lp = fi.Location as LocationPoint; if (lp == null) continue;
                 var com = fi.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString(); if (string.IsNullOrWhiteSpace(com)) com = fi.Symbol.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)?.AsString();
@@ -134,13 +168,84 @@ using (var t = new Transaction(document, "Skill: textos")) {
                 double h = nivel != null ? Math.Round((lp.Point.Z - nivel.Elevation) * 0.3048, 2) : -1;
                 var chave = Math.Round(lp.Point.X, 2) + "|" + Math.Round(lp.Point.Y, 2); if (!jaRot.Add(chave)) continue;   // tomada dupla: um rótulo só
                 bool foraPadrao = modo == "tomadas" && h >= 0 && !padrao.Any(pd => Math.Abs(pd - h) < 0.02);
+                // iluminação: luminária de parede ou prateleira sempre leva a altura (checklist)
+                string nmLum = SemAcento(fi.Symbol.FamilyName + " " + fi.Symbol.Name);
+                bool deParede = modo == "iluminacao" && h > 0.05 && (fi.Host is Wall || nmLum.Contains("ARANDELA") || nmLum.Contains("PAREDE") || nmLum.Contains("PRATELEIRA") || nmLum.Contains("BALIZADOR"));
+                if (deParede) foraPadrao = true;
                 if (string.IsNullOrWhiteSpace(com) && !foraPadrao) continue;
                 string hTxt = h < 0 ? "" : (h < 1.0 ? Math.Round(h * 100) + "cm" : h.ToString("0.00", new System.Globalization.CultureInfo("pt-BR")) + "m");
-                string txt = !string.IsNullOrWhiteSpace(com) ? com.Trim() + (modo == "tomadas" && hTxt != "" && !com.Contains("h=") ? " h= " + hTxt : "") : "Tomada h= " + hTxt;
+                string txt = !string.IsNullOrWhiteSpace(com) ? com.Trim() + ((modo == "tomadas" || deParede) && hTxt != "" && !com.Contains("h=") ? " h= " + hTxt : "")
+                    : deParede ? Limpo(fi.Symbol.Name) + " h= " + hTxt : "Tomada h= " + hTxt;
                 var f = new XYZ(fi.FacingOrientation.X, fi.FacingOrientation.Y, 0); if (f.GetLength() < 0.5) f = XYZ.BasisY; f = f.Normalize();
                 var pos = lp.Point + f.Multiply(Pap(9)) + new XYZ(Pap(2), 0, 0); Chamada(txt, new XYZ(pos.X, pos.Y, z), new XYZ(lp.Point.X, lp.Point.Y, z));
             }
             if (n == 0) avisos.Add("nenhuma peça fora do padrão ou com Comentários — nada a anotar");
+        }
+        else if (modo == "paginacao") {
+            Phase faseP = null; try { faseP = document.GetElement(vista.get_Parameter(BuiltInParameter.VIEW_PHASE).AsElementId()) as Phase; } catch { }
+            var portas = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Doors).WhereElementIsNotElementType().Cast<FamilyInstance>().ToList();
+            Func<FamilyInstance, double> LargP = fi => { var p = fi.Symbol.get_Parameter(BuiltInParameter.DOOR_WIDTH) ?? fi.Symbol.get_Parameter(BuiltInParameter.FAMILY_WIDTH_PARAM); return p != null && p.HasValue ? p.AsDouble() : 0; };
+            foreach (var r in noNivel) {
+                var lp = r.Location as LocationPoint; if (lp == null) continue;
+                var piso = AcabPiso(r);
+                if (piso != null) Texto("PISO " + piso, new XYZ(lp.Point.X, lp.Point.Y - Pap(4), z), optC); else avisos.Add(NomeAmb(r) + ": sem acabamento de piso");
+                // porta principal: a mais larga que dá para o ambiente
+                var dele = portas.Where(fi => { try { var a = faseP != null ? fi.get_FromRoom(faseP) : fi.FromRoom; var b = faseP != null ? fi.get_ToRoom(faseP) : fi.ToRoom; return (a != null && a.Id == r.Id) || (b != null && b.Id == r.Id); } catch { return false; } })
+                    .OrderByDescending(LargP).FirstOrDefault();
+                if (dele == null) continue;
+                var pp = (dele.Location as LocationPoint)?.Point; if (pp == null) continue;
+                // ponto alvo: 30 cm para dentro do ambiente a partir da porta
+                var dirIn = new XYZ(lp.Point.X - pp.X, lp.Point.Y - pp.Y, 0); if (dirIn.GetLength() < 1e-6) continue; dirIn = dirIn.Normalize();
+                var alvo = new XYZ(pp.X, pp.Y, z) + dirIn.Multiply(F(0.30));
+                Chamada("INÍCIO DA PAGINAÇÃO", alvo + dirIn.Multiply(Pap(10)) + new XYZ(Pap(3), 0, 0), alvo);
+            }
+            // nota geral acima do desenho
+            var bbs = noNivel.Select(r => r.get_BoundingBox(null)).Where(b => b != null).ToList();
+            if (bbs.Count > 0) {
+                double xm = (bbs.Min(b => b.Min.X) + bbs.Max(b => b.Max.X)) / 2, yt = bbs.Max(b => b.Max.Y) + Pap(12);
+                Texto("RALOS CONFORME PROJETO HIDROSSANITÁRIO (TIPO DE RALO POR AMBIENTE)", new XYZ(xm, yt, z), optC);
+                if (pisos.Any(f => SemAcento(document.GetElement(f.GetTypeId())?.Name).Contains("CANALETA")))
+                    Texto("ÁREAS EXTERNAS: CANALETA DE CONCRETO P/ DESCIDA DE ÁGUA ENTRE REJUNTES (VER INDICAÇÃO)", new XYZ(xm, yt - Pap(5), z), optC);
+            }
+        }
+        else if (modo == "ar") {
+            var eqs = new FilteredElementCollector(document, vista.Id).OfCategory(BuiltInCategory.OST_MechanicalEquipment).WhereElementIsNotElementType().OfType<FamilyInstance>().ToList();
+            Func<FamilyInstance, string, string> ParNome = (fi, chave) => { foreach (Parameter pp in fi.Parameters) if (pp.Definition != null && SemAcento(pp.Definition.Name).Contains(chave) && pp.HasValue) { var v = pp.StorageType == StorageType.String ? pp.AsString() : pp.AsValueString(); if (!string.IsNullOrWhiteSpace(v)) return v; }
+                foreach (Parameter pp in fi.Symbol.Parameters) if (pp.Definition != null && SemAcento(pp.Definition.Name).Contains(chave) && pp.HasValue) { var v = pp.StorageType == StorageType.String ? pp.AsString() : pp.AsValueString(); if (!string.IsNullOrWhiteSpace(v)) return v; } return null; };
+            Func<FamilyInstance, bool> EhCond = fi => SemAcento(fi.Symbol.FamilyName + " " + fi.Symbol.Name).Contains("CONDENSADORA");
+            foreach (var fi in eqs) {
+                var lp = fi.Location as LocationPoint; if (lp == null) continue;
+                var btu = ParNome(fi, "BTU"); var mod = ParNome(fi, "MODELO") ?? Limpo(fi.Symbol.Name);
+                if (btu == null && !EhCond(fi)) avisos.Add(Limpo(fi.Symbol.Name) + " [" + fi.Id.Value + "]: sem parâmetro de BTU");
+                string txt = (btu != null ? btu.Replace("BTU/h", "").Replace("BTU", "").Trim() + " BTU/h · " : "") + mod.ToUpper();
+                Chamada(txt, new XYZ(lp.Point.X + Pap(8), lp.Point.Y + Pap(8), z), new XYZ(lp.Point.X, lp.Point.Y, z));
+            }
+            var conds = eqs.Where(EhCond).ToList(); var evaps = eqs.Where(fi => !EhCond(fi)).ToList();
+            if (conds.Count > 0) foreach (var ev in evaps) {
+                var pe = (ev.Location as LocationPoint)?.Point; if (pe == null) continue;
+                var cd = conds.OrderBy(c => ((LocationPoint)c.Location).Point.DistanceTo(pe)).First(); var pc = ((LocationPoint)cd.Location).Point;
+                double dist = pc.DistanceTo(pe) * 0.3048; var meio = (pe + pc) / 2;
+                Texto("DIST. EVAP./COND. ≈ " + dist.ToString("0.00", new System.Globalization.CultureInfo("pt-BR")) + "m", new XYZ(meio.X, meio.Y, z), optC);
+            }
+            else if (evaps.Count > 0) avisos.Add("nenhuma condensadora (\"CONDENSADORA\" no nome) nesta planta: distâncias não anotadas");
+            if (eqs.Count == 0) avisos.Add("nenhum equipamento de ar-condicionado nesta vista");
+        }
+        else if (modo == "hidro") {
+            int nH = 0; var jaH = new HashSet<string>();
+            foreach (var bc in new[] { BuiltInCategory.OST_PlumbingFixtures, BuiltInCategory.OST_PipeAccessory, BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_GenericModel })
+            foreach (var fi in new FilteredElementCollector(document, vista.Id).OfCategory(bc).WhereElementIsNotElementType().OfType<FamilyInstance>()) {
+                var nmH = SemAcento(fi.Symbol.FamilyName + " " + fi.Symbol.Name);
+                if (bc == BuiltInCategory.OST_MechanicalEquipment || bc == BuiltInCategory.OST_GenericModel) { if (!nmH.Contains("GAS") && !nmH.Contains("NICHO")) continue; }
+                var lp = fi.Location as LocationPoint; if (lp == null) continue;
+                var chave = Math.Round(lp.Point.X, 2) + "|" + Math.Round(lp.Point.Y, 2); if (!jaH.Add(chave)) continue;
+                double h = nivel != null ? Math.Round((lp.Point.Z - nivel.Elevation) * 0.3048, 2) : -1;
+                string hTxt = h > 0.05 ? " h= " + (h < 1.0 ? Math.Round(h * 100) + "cm" : h.ToString("0.00", new System.Globalization.CultureInfo("pt-BR")) + "m") : "";
+                string rot = nmH.Contains("GAS") ? "PONTO DE GÁS" : nmH.Contains("QUENTE") ? "ÁGUA QUENTE" : nmH.Contains("FRIA") ? "ÁGUA FRIA" : Limpo(fi.Symbol.Name);
+                var com = fi.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)?.AsString(); if (!string.IsNullOrWhiteSpace(com)) rot = com.Trim();
+                var f = new XYZ(fi.FacingOrientation.X, fi.FacingOrientation.Y, 0); if (f.GetLength() < 0.5) f = XYZ.BasisY; f = f.Normalize();
+                var pos = lp.Point + f.Multiply(Pap(9)) + new XYZ(Pap(2), 0, 0); Chamada(rot + hTxt, new XYZ(pos.X, pos.Y, z), new XYZ(lp.Point.X, lp.Point.Y, z)); nH++;
+            }
+            if (nH == 0) avisos.Add("nenhum ponto hidráulico ou de gás nesta vista");
         }
         else if (modo == "corte" || modo == "fachada") {
             var vs = vista as ViewSection; var dirH = vista.RightDirection; var dirV = vista.ViewDirection;

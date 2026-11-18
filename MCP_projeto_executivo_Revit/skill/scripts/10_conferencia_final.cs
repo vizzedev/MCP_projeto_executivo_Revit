@@ -9,6 +9,12 @@
 //           CONTEÚDO DA PRANCHA vazio (quando o parâmetro existe).
 // ATENÇÃO:  vistas do caderno fora de folha (cortes, fachadas, plantas executivas, vistas de ambiente, perspectivas);
 //           RRT/ART/executor vazios; avisos do Revit.
+// CHECKLIST EXECUTIVO (ATENÇÃO): itens do checklist do escritório que dá para procurar no modelo — campos do carimbo
+//           (tipo de construção, data, desenhista, ART/RRT, QR code, nomes e CPF dos clientes); implantação (norte, nome e
+//           largura da rua, asfalto, lotes vizinhos, recuos em linha "RECUO"); elementos (abrigo de medidores/padrão de
+//           energia, caixa de captação, lixeira, piso tátil, rebaixo de meio-fio, ducha quando há piscina, casa de gás);
+//           legenda na folha da planta executiva; paisagismo visível nas plantas executivas; colunas das tabelas
+//           (esquadrias: altura, largura, quantidade, ambiente, material; luminárias: nome e cor). Só procura e aponta.
 var prefixo = parameters.Length > 0 ? ((parameters[0] as string) ?? "") : "";
 Func<double, double> ToMM = v => v * 304.8;
 var bloqueia = new List<string>(); var corrigir = new List<string>(); var atencao = new List<string>(); var ok = new List<string>();
@@ -85,11 +91,74 @@ var foraDeFolha = new FilteredElementCollector(document).OfClass(typeof(View)).C
 if (foraDeFolha.Count > 0) atencao.Add("Vistas do caderno que não estão em nenhuma folha (" + foraDeFolha.Count + "): " + string.Join("; ", foraDeFolha.Take(12)) + (foraDeFolha.Count > 12 ? "; …" : ""));
 var avisos = document.GetWarnings().Count; if (avisos > 0) atencao.Add("Avisos do Revit: " + avisos + " (detalhes na conferência do modelo, fase 3).");
 
+// --- checklist executivo (procura por nome; só aponta)
+var checklist = new List<string>();
+Func<string, string> SemAc = x => new string((x ?? "").Normalize(System.Text.NormalizationForm.FormD).Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray()).ToUpper();
+// carimbo: parâmetros das Informações do projeto pelo nome
+var paramsPI = pi.Parameters.Cast<Parameter>().Where(p => p.Definition != null).ToList();
+foreach (var campo in new[] { new[] { "TIPO DE CONSTRU", "tipo de construção" }, new[] { "DATA", "data" }, new[] { "DESENHISTA", "desenhista" }, new[] { "RRT", "ART/RRT" }, new[] { "QR", "QR code" }, new[] { "CPF", "CPF dos clientes" }, new[] { "CLIENTE", "nome dos clientes" } }) {
+    var ps = paramsPI.Where(p => SemAc(p.Definition.Name).Contains(campo[0])).ToList();
+    if (ps.Count == 0) checklist.Add("Carimbo: não há campo de " + campo[1] + " nas Informações do projeto (confira o carimbo).");
+    else if (ps.All(p => (p.StorageType == StorageType.String ? (p.AsString() ?? "") : (p.AsValueString() ?? "")).Trim() == "")) checklist.Add("Carimbo: " + campo[1] + " vazio (" + ps[0].Definition.Name + ").");
+}
+// tudo o que tem nome no modelo: tipos colocados + textos de todas as vistas
+var nomesModelo = new HashSet<string>(new FilteredElementCollector(document).WhereElementIsNotElementType().ToElements()
+    .Select(e => { var tp = document.GetElement(e.GetTypeId()) as ElementType; return tp == null ? "" : SemAc(((tp as FamilySymbol)?.FamilyName ?? "") + " " + tp.Name); }).Where(x => x != ""));
+var textos = new FilteredElementCollector(document).OfClass(typeof(TextNote)).Cast<TextNote>().Select(tn => new { V = tn.OwnerViewId, T = SemAc(tn.Text) }).ToList();
+Func<string[], bool> Existe = chaves => nomesModelo.Any(nm => chaves.Any(k => nm.Contains(k))) || textos.Any(tx => chaves.Any(k => tx.T.Contains(k)));
+var itens = new List<Tuple<string, string[]>> {
+    Tuple.Create("abrigo de medidores / padrão de energia", new[] { "MEDIDOR", "PADRAO DE ENERGIA", "PADRAO ENERGIA", "ABRIGO" }),
+    Tuple.Create("caixa de captação (mín. 1,5 m das laterais e da frente)", new[] { "CAPTACAO" }),
+    Tuple.Create("lixeira", new[] { "LIXEIRA" }),
+    Tuple.Create("piso tátil", new[] { "TATIL" }),
+    Tuple.Create("rebaixo do meio-fio (profundidade 50 cm)", new[] { "REBAIXO", "MEIO-FIO", "MEIO FIO" }),
+    Tuple.Create("casa de gás", new[] { "GAS" }) };
+if (Existe(new[] { "PISCINA" })) itens.Add(Tuple.Create("ducha externa (há piscina)", new[] { "DUCHA" }));
+foreach (var it in itens) if (!Existe(it.Item2)) checklist.Add("Não encontrado no modelo nem nos textos: " + it.Item1 + ".");
+// implantação: norte, rua, asfalto, lotes vizinhos, recuos
+var implant = new FilteredElementCollector(document).OfClass(typeof(ViewPlan)).Cast<ViewPlan>().Where(v => !v.IsTemplate && (SemAc(v.Name).Contains("IMPLANTA") || SemAc(v.Name).Contains("SITUACAO"))).ToList();
+if (implant.Count > 0) {
+    var ids = new HashSet<ElementId>(implant.Select(v => v.Id));
+    var txImp = textos.Where(tx => ids.Contains(tx.V)).Select(tx => tx.T).ToList();
+    var simbolos = implant.SelectMany(v => new FilteredElementCollector(document, v.Id).OfCategory(BuiltInCategory.OST_GenericAnnotation).WhereElementIsNotElementType().ToElements())
+        .Select(e => { var tp = document.GetElement(e.GetTypeId()) as FamilySymbol; return tp == null ? "" : SemAc(tp.FamilyName + " " + tp.Name); }).ToList();
+    if (!simbolos.Any(x => x.Contains("NORTE")) && !txImp.Any(x => x.Contains("NORTE"))) checklist.Add("Implantação/situação sem símbolo de norte.");
+    if (!txImp.Any(x => x.Contains("RUA") || x.Contains("AV.") || x.Contains("AVENIDA") || x.Contains("ALAMEDA"))) checklist.Add("Implantação sem o nome da rua.");
+    if (!txImp.Any(x => x.Contains("ASFALT") || x.Contains("SEM PAVIMENTA") || x.Contains("TERRA"))) checklist.Add("Implantação sem a anotação se a rua é asfaltada.");
+    if (!txImp.Any(x => x.Contains("LARGURA") || x.Contains("CAIXA DA RUA"))) checklist.Add("Implantação sem a largura da rua (texto ou cota).");
+    if (!txImp.Any(x => x.Contains("LOTE"))) checklist.Add("Implantação sem os números dos lotes vizinhos.");
+} else checklist.Add("Nenhuma vista de implantação/situação encontrada.");
+bool temRecuo = new FilteredElementCollector(document).OfClass(typeof(CurveElement)).Cast<CurveElement>().Any(ce => { try { return ce.LineStyle != null && SemAc(ce.LineStyle.Name).Contains("RECUO"); } catch { return false; } });
+if (!temRecuo) checklist.Add("Nenhuma linha no estilo \"RECUO\" (linhas de recuo em azul tracejado na implantação e na planta executiva).");
+// planta executiva: legenda na folha e paisagismo escondido
+var execs = new FilteredElementCollector(document).OfClass(typeof(ViewPlan)).Cast<ViewPlan>().Where(v => !v.IsTemplate && v.Name.StartsWith(prefixo) && SemAc(v.Name).Contains("EXECUTIVO")).ToList();
+foreach (var v in execs) {
+    var vpE = new FilteredElementCollector(document).OfClass(typeof(Viewport)).Cast<Viewport>().FirstOrDefault(x => x.ViewId == v.Id);
+    if (vpE != null) { bool temLeg = new FilteredElementCollector(document).OfClass(typeof(Viewport)).Cast<Viewport>().Any(x => x.SheetId == vpE.SheetId && (document.GetElement(x.ViewId) as View)?.ViewType == ViewType.Legend);
+        if (!temLeg) checklist.Add("Folha de \"" + v.Name + "\" sem legenda da planta baixa executivo."); }
+    foreach (var bc in new[] { BuiltInCategory.OST_Planting, BuiltInCategory.OST_Entourage }) {
+        bool oculto = false; try { oculto = v.GetCategoryHidden(new ElementId(bc)); } catch { }
+        if (!oculto && new FilteredElementCollector(document, v.Id).OfCategory(bc).WhereElementIsNotElementType().GetElementCount() > 0) { checklist.Add("Paisagismo visível em \"" + v.Name + "\" (deve ficar só na planta de layout)."); break; }
+    }
+}
+// tabelas: colunas pedidas pelo checklist
+foreach (var vs in new FilteredElementCollector(document).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>().Where(x => !x.IsTemplate && !x.IsTitleblockRevisionSchedule)) {
+    var nmT = SemAc(vs.Name); string[] pedidas = null;
+    if (nmT.Contains("PORTA") || nmT.Contains("JANELA")) pedidas = new[] { "ALTURA", "LARGURA", "AMBIENTE", "MATERIAL" };
+    else if (nmT.Contains("LUMINOTEC") || nmT.Contains("LUMINARIA")) pedidas = new[] { "COR" };
+    if (pedidas == null) continue;
+    List<string> campos; try { var def = vs.Definition; campos = Enumerable.Range(0, def.GetFieldCount()).Select(i => SemAc(def.GetField(i).GetName() + " " + def.GetField(i).ColumnHeading)).ToList(); } catch { continue; }
+    var faltam = pedidas.Where(pd => !campos.Any(c => c.Contains(pd))).ToList();
+    if ((nmT.Contains("PORTA") || nmT.Contains("JANELA")) && !campos.Any(c => c.Contains("CONTAGEM") || c.Contains("QUANT") || c.Contains("COUNT"))) faltam.Add("QUANTIDADE");
+    if (faltam.Count > 0) checklist.Add("Tabela \"" + vs.Name + "\" sem coluna(s): " + string.Join(", ", faltam).ToLower() + ".");
+}
+
 var sb = new System.Text.StringBuilder();
 sb.AppendLine("CONFERÊNCIA FINAL — " + document.Title + (prefixo != "" ? " (folhas \"" + prefixo + "…\")" : ""));
 sb.AppendLine(bloqueia.Count == 0 ? "Pronto para emitir" + (corrigir.Count > 0 ? ", com " + corrigir.Count + " item(ns) a corrigir." : ".") : "⛔ " + bloqueia.Count + " bloqueio(s): não emitir antes de resolver.");
 if (bloqueia.Count > 0) { sb.AppendLine("\nBLOQUEIA"); foreach (var x in bloqueia) sb.AppendLine("  • " + x); }
 if (corrigir.Count > 0) { sb.AppendLine("\nCORRIGIR"); foreach (var x in corrigir) sb.AppendLine("  • " + x); }
 if (atencao.Count > 0) { sb.AppendLine("\nATENÇÃO"); foreach (var x in atencao) sb.AppendLine("  • " + x); }
+if (checklist.Count > 0) { sb.AppendLine("\nATENÇÃO — CHECKLIST EXECUTIVO (procura por nome; confira na prancha)"); foreach (var x in checklist) sb.AppendLine("  • " + x); }
 if (ok.Count > 0) { sb.AppendLine("\nOK"); foreach (var x in ok) sb.AppendLine("  • " + x); }
 return sb.ToString();

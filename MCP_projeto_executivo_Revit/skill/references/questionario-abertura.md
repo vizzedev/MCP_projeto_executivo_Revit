@@ -9,6 +9,7 @@ Coluna "Parâmetro" = nome exato usado em `01_preencher_dados.cs`.
 | Nome do cliente (como aparece no carimbo) | Nome do cliente | nativo |
 | Proprietário(s) / razão social | Proprietario | |
 | CPF ou CNPJ do proprietário (com o rótulo, ex.: "CPF: …") | CPF do Proprietario | |
+| Nomes e CPF de todos os clientes que vão no carimbo | CPF do Proprietario | um por linha |
 
 ## Bloco 2 — Obra e terreno
 | Pergunta | Parâmetro | Observação |
@@ -30,6 +31,15 @@ Testada e profundidade saem do modelo (linhas de propriedade ou paredes). Se o c
 | Números dos lotes vizinhos (esquerda e direita, olhando da rua) | vizinhos | opcional; sem eles o desenho mostra "—" |
 | Para qual ponto cardeal a frente do lote está voltada (N, NE, L, SE, S, SO, O, NO) | cardeal | gira o símbolo de norte; o norte do modelo costuma não estar ajustado |
 | Largura das ruas (m) | largura | padrão 12 |
+| A rua da frente é asfaltada? | asfalto (`06_implantacao.cs`) | sim / não |
+| Numeração predial (número da casa) | numero (`06_implantacao.cs`) | se já tiver |
+| Número do lote dos fundos | lote_fundo (`06_implantacao.cs`) | opcional |
+
+### Bloco 2c — Recuos e acessos (linhas de recuo e elementos externos)
+| Pergunta | Parâmetro do script | Observação |
+|---|---|---|
+| Recuo frontal, laterais (esquerda/direita) e de fundos exigidos (m) | recuo_frente, recuo_lateral (ou recuo_esq/recuo_dir), recuo_fundo (`06_implantacao.cs`) | da lei de uso do solo ou do condomínio; 0 = sem recuo |
+| De que lado fica o acesso de veículos, olhando da rua | garagem=esquerda/direita (`06_elementos_externos.cs`) | se o modelo tiver ambiente GARAGEM, a skill deduz |
 
 ## Bloco 3 — Projeto
 | Pergunta | Onde vai | Observação |
@@ -49,6 +59,8 @@ Testada e profundidade saem do modelo (linhas de propriedade ou paredes). Se o c
 | Executor da obra | Executor da obra | |
 | CREA do executor | Numero CREA | com rótulo: "CREA: …" |
 | Desenhista | Desenhista | |
+| Tipo de construção (ex.: "RESIDÊNCIA UNIFAMILIAR TÉRREA") | o parâmetro do carimbo com "TIPO DE CONSTRUÇÃO" no nome | |
+| Link para o QR code do carimbo (pasta do projeto, página da obra) | `08_qrcode.cs` | a skill gera o PNG com Python na pasta do projeto e coloca nas folhas |
 | RRT de projeto | RRT | |
 | ART de execução | ART | |
 | Data de emissão | Data de emissão do projeto | nativo, dd/mm/aaaa |

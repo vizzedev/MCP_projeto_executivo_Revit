@@ -1,6 +1,9 @@
-# Fase 1 — Abertura do projeto
+# Fase 1 — Recebimento do projeto modelado
 
-Objetivo: criar o arquivo do projeto a partir do template master, preencher os dados do carimbo e ajustar níveis e pavimentos.
+Objetivo: receber o projeto que a equipe modelou (a partir do template master), preencher os dados do carimbo e registrar o
+estado da skill. A skill **não cria nem modela** o projeto: os passos 2 e 3 abaixo só valem se a equipe pedir um arquivo
+novo a partir do template. No uso normal, comece pelo questionário (passo 1), pule para o passo 4 e confirme os pavimentos
+(níveis "PAV. X N.A" com ambientes) que o modelo tem.
 
 ## Passos
 1. **Questionário** — faça as perguntas de `references/questionario-abertura.md`, em blocos (no máximo 4 perguntas por vez). Dados do escritório e responsáveis padrão vêm do perfil; só confirme. Mostre um resumo final e peça confirmação antes de criar o arquivo.

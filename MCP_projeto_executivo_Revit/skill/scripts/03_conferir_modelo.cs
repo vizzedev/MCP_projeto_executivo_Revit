@@ -7,6 +7,11 @@
 //   CORRIGIR  — aparece errado nas folhas/tabelas (ambiente sem nome/não colocado/não fechado, porta/janela sem marca ou repetida,
 //               CAD importado no modelo, vínculo descarregado)
 //   ATENÇÃO   — avisos do Revit agrupados, paredes muito curtas, áreas molhadas sem forro, cômodos sem piso
+//   REGRAS DE PROJETO (ATENÇÃO) — padrões do checklist executivo do escritório que dá para medir no modelo:
+//               peitoril de janela 1,00 m · porta de entrada ≥ 1,30 m e pivotante · porta de lavabo ≥ 0,70 m ·
+//               porta de alumínio em corredor ≥ 0,90 m · vaga de garagem 3,00 × 5,00 m · bancadas (cozinha 0,70 de
+//               profundidade e 0,90/0,95 de altura, ilha ≥ 0,90, lavabo 0,55, lavanderia 0,60, churrasqueira 1,10 ×
+//               0,80–0,90) · topografia modelada. São da modelagem da equipe: a skill só aponta, a equipe decide.
 // Não altera nada. As correções automáticas ficam em 03_corrigir_modelo.cs (com confirmação).
 bool detalhe = parameters.Length > 0 && ((parameters[0] as string) ?? "").ToLower().StartsWith("det");
 Func<double, double> F = m => m / 0.3048;
@@ -75,6 +80,62 @@ var forros = new FilteredElementCollector(document).OfCategory(BuiltInCategory.O
 var semForro = validos.Where(r => molhados.Any(m => Nome(r).ToUpper().Contains(m))).Where(r => { var b = r.get_BoundingBox(null); var c = (b.Min + b.Max) / 2; return !forros.Any(f => c.X > f.Min.X && c.X < f.Max.X && c.Y > f.Min.Y && c.Y < f.Max.Y && f.Min.Z > r.Level.Elevation); }).ToList();
 if (semForro.Count > 0) atencao.Add("Áreas molhadas sem forro modelado (planta de forro e isométricas de paginação ficam incompletas): " + semForro.Count + Ex(semForro.Select(r => Nome(r))));
 
+// --- regras de projeto (checklist executivo) — só aponta, tolerância de 2 cm
+var regras = new List<string>();
+double tol = F(0.02);
+Phase faseFinal = null; foreach (Phase ph in document.Phases) faseFinal = ph;
+Func<FamilyInstance, Autodesk.Revit.DB.Architecture.Room[]> Lados = fi => { try { return new[] { fi.get_FromRoom(faseFinal), fi.get_ToRoom(faseFinal) }; } catch { return new Autodesk.Revit.DB.Architecture.Room[] { null, null }; } };
+Func<FamilyInstance, BuiltInParameter, double> Dim = (fi, bip) => { var p = fi.get_Parameter(bip); if (p == null || !p.HasValue || p.AsDouble() <= 0) p = fi.Symbol.get_Parameter(bip); return p != null && p.HasValue ? p.AsDouble() : 0; };
+Func<Autodesk.Revit.DB.Architecture.Room, string> NomeU = r => r == null ? "" : Nome(r).ToUpper();
+Func<double, string> M = v => (v * 0.3048).ToString("0.00");
+var umidos = new[] { "WC", "BANHEIRO", "LAVABO", "BANHO", "LAVATÓRIO", "LAVATORIO" };
+// janelas: peitoril padrão 1,00 m (banheiros e lavabos ficam de fora: costumam ter peitoril alto)
+var janelas = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Windows).WhereElementIsNotElementType().Cast<FamilyInstance>().ToList();
+var peitoril = janelas.Where(fi => { var p = fi.get_Parameter(BuiltInParameter.INSTANCE_SILL_HEIGHT_PARAM); if (p == null || !p.HasValue) return false;
+    var amb = Lados(fi).Where(r => r != null).Select(NomeU).ToList(); if (amb.Any(n => umidos.Any(u => n.Contains(u)))) return false;
+    return Math.Abs(p.AsDouble() - F(1.00)) > tol; }).ToList();
+if (peitoril.Count > 0) regras.Add("Janelas com peitoril diferente de 1,00 m (fora banheiros/lavabos): " + peitoril.Count + Ex(peitoril.Select(fi => fi.Symbol.Name + " h=" + M(fi.get_Parameter(BuiltInParameter.INSTANCE_SILL_HEIGHT_PARAM).AsDouble()) + " [" + fi.Id.Value + "]")));
+// portas
+var portas = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Doors).WhereElementIsNotElementType().Cast<FamilyInstance>().ToList();
+var entradaNomes = new[] { "SALA", "ESTAR", "LIVING", "HALL", "ENTRADA", "VESTÍBULO", "VESTIBULO" };
+foreach (var fi in portas) {
+    var lados = Lados(fi); var nomes = lados.Select(NomeU).ToList(); double w = Dim(fi, BuiltInParameter.DOOR_WIDTH); if (w <= 0) w = Dim(fi, BuiltInParameter.FAMILY_WIDTH_PARAM);
+    string tipo = (fi.Symbol.FamilyName + " " + fi.Symbol.Name).ToUpper(); string id = fi.Symbol.Name + " [" + fi.Id.Value + "]";
+    bool externa = lados.Any(r => r == null) || nomes.Any(n => n.Contains("ALPENDRE") || n.Contains("VARANDA") || n.Contains("CALÇADA"));
+    if (externa && nomes.Any(n => entradaNomes.Any(e => n.Contains(e)))) {
+        if (w > 0 && w < F(1.30) - tol) regras.Add("Porta de entrada com " + M(w) + " m (mínimo 1,30 m): " + id);
+        if (!tipo.Contains("PIVOT")) regras.Add("Porta de entrada não é pivotante: " + id);
+    }
+    if (nomes.Any(n => n.Contains("LAVABO")) && w > 0 && w < F(0.70) - tol) regras.Add("Porta de lavabo com " + M(w) + " m (vão livre mínimo 0,70 m): " + id);
+    if ((tipo.Contains("ALUM")) && nomes.Any(n => n.Contains("CORREDOR") || n.Contains("CIRCULA")) && w > 0 && w < F(0.90) - tol) regras.Add("Porta de alumínio em corredor com " + M(w) + " m (mínimo 0,90 m): " + id);
+}
+// garagem: vaga padrão 3,00 × 5,00 m (pelo contorno do ambiente)
+foreach (var r in validos.Where(r => NomeU(r).Contains("GARAGEM"))) {
+    var b = r.get_BoundingBox(null); double a1 = Math.Min(b.Max.X - b.Min.X, b.Max.Y - b.Min.Y), a2 = Math.Max(b.Max.X - b.Min.X, b.Max.Y - b.Min.Y);
+    if (a1 < F(3.00) - tol || a2 < F(5.00) - tol) regras.Add("Garagem \"" + Nome(r) + "\" com " + M(a1) + " × " + M(a2) + " m (vaga padrão 3,00 × 5,00 m)");
+}
+// bancadas (marcenaria/casework): profundidade = menor lado em planta; altura = topo − nível do ambiente
+var bancadas = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Casework).WhereElementIsNotElementType().Cast<FamilyInstance>().ToList();
+foreach (var fi in bancadas) {
+    var b = fi.get_BoundingBox(null); if (b == null) continue;
+    var c = (b.Min + b.Max) / 2; var r = validos.FirstOrDefault(x => { try { return x.IsPointInRoom(new XYZ(c.X, c.Y, x.Level.Elevation + F(0.5))); } catch { return false; } });
+    string amb = NomeU(r); string nm = (fi.Symbol.FamilyName + " " + fi.Symbol.Name).ToUpper(); if (!nm.Contains("BANCADA") && !nm.Contains("ILHA") && !nm.Contains("CHURRASQ")) continue;
+    double prof = Math.Min(b.Max.X - b.Min.X, b.Max.Y - b.Min.Y), larg = Math.Max(b.Max.X - b.Min.X, b.Max.Y - b.Min.Y), alt = r != null ? b.Max.Z - r.Level.Elevation : 0;
+    string id = fi.Symbol.Name + " em " + (r != null ? Nome(r) : "?") + " [" + fi.Id.Value + "]";
+    if (nm.Contains("CHURRASQ")) { if (Math.Abs(larg - F(1.10)) > tol) regras.Add("Churrasqueira com " + M(larg) + " m de largura (padrão 1,10 m): " + id);
+        if (prof < F(0.80) - tol || prof > F(0.90) + tol) regras.Add("Churrasqueira com " + M(prof) + " m de profundidade (padrão 0,80–0,90 m): " + id); continue; }
+    if (nm.Contains("ILHA")) { if (prof < F(0.90) - tol) regras.Add("Ilha com " + M(prof) + " m de largura (mínimo 0,90 m): " + id); continue; }
+    if (amb.Contains("COZINHA") || amb.Contains("GOURMET")) {
+        if (Math.Abs(prof - F(0.70)) > tol) regras.Add("Bancada de cozinha com " + M(prof) + " m de profundidade (padrão 0,70 m): " + id);
+        if (r != null && Math.Abs(alt - F(0.90)) > tol && Math.Abs(alt - F(0.95)) > tol) regras.Add("Bancada de cozinha com " + M(alt) + " m de altura (padrão 0,90 m; 0,95 m com cervejeira): " + id);
+    } else if (amb.Contains("LAVABO")) { if (Math.Abs(prof - F(0.55)) > tol) regras.Add("Bancada de lavabo com " + M(prof) + " m (padrão 0,55 m): " + id); }
+    else if (amb.Contains("LAVANDERIA") || amb.Contains("SERVIÇO") || amb.Contains("SERVICO")) { if (Math.Abs(prof - F(0.60)) > tol) regras.Add("Bancada de lavanderia com " + M(prof) + " m (padrão 0,60 m): " + id); }
+}
+// topografia
+bool temTopo = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_Topography).WhereElementIsNotElementType().GetElementCount() > 0;
+try { temTopo = temTopo || new FilteredElementCollector(document).OfClass(typeof(Toposolid)).GetElementCount() > 0; } catch { }
+if (!temTopo) regras.Add("Topografia não modelada (o checklist pede o levantamento planialtimétrico no Revit: níveis do lote, postes, árvores, boca de lobo).");
+
 // --- avisos do Revit agrupados
 var avisos = document.GetWarnings();
 var grupos = avisos.GroupBy(w => w.GetDescriptionText()).OrderByDescending(g => g.Count()).ToList();
@@ -87,5 +148,7 @@ sb.AppendLine(bloqueia.Count == 0 ? "Nenhum bloqueio: o modelo pode seguir para 
 if (bloqueia.Count > 0) { sb.AppendLine("\nBLOQUEIA"); foreach (var s in bloqueia) sb.AppendLine("  • " + s); }
 if (corrigir.Count > 0) { sb.AppendLine("\nCORRIGIR"); foreach (var s in corrigir) sb.AppendLine("  • " + s); }
 if (atencao.Count > 0) { sb.AppendLine("\nATENÇÃO"); foreach (var s in atencao) sb.AppendLine("  • " + s); }
+if (regras.Count > 0) { sb.AppendLine("\nATENÇÃO — REGRAS DE PROJETO (checklist executivo; a equipe decide se corrige)"); foreach (var s in regras) sb.AppendLine("  • " + s); }
+else sb.AppendLine("\nREGRAS DE PROJETO: nada fora do padrão do checklist entre as que a skill confere.");
 sb.AppendLine("\nOK"); foreach (var s in ok) sb.AppendLine("  • " + s);
 return sb.ToString();
