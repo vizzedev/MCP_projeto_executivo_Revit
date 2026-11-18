@@ -1,14 +1,14 @@
 // SKILL EXECUTIVO REVIT — Fase 5: planta de situação vetorial (vista de desenho)
 // send_code_to_revit · transactionMode "none"
 // parameters[0]  = nome da vista (padrão "PLANTA DE SITUAÇÃO"; em teste "SKILL PLANTA DE SITUAÇÃO")
-// parameters[1]  = número do lote (ex.: "12")
-// parameters[2]  = quadra (ex.: "B")
-// parameters[3]  = rua da frente (ex.: "RUA DAS FLORES")
-// parameters[4]  = distância da divisa do lote até a esquina mais próxima, em m (ex.: "60")
-// parameters[5]  = rua da esquina (ex.: "AVENIDA CENTRAL")
+// parameters[1]  = número do lote (ex.: "27")
+// parameters[2]  = quadra (ex.: "L")
+// parameters[3]  = rua da frente (ex.: "RUA NELSON MAIA")
+// parameters[4]  = distância da divisa do lote até a esquina mais próxima, em m (ex.: "105")
+// parameters[5]  = rua da esquina (ex.: "AVENIDA DAS ACÁCIAS")
 // parameters[6]  = lado da esquina olhando o lote da rua: "D" (direita) ou "E" (esquerda)
-// parameters[7]  = lotes vizinhos à esquerda, do mais próximo ao mais distante, separados por ";" (ex.: "13;14") — opcional
-// parameters[8]  = lotes vizinhos à direita (ex.: "11;10") — opcional
+// parameters[7]  = lotes vizinhos à esquerda, do mais próximo ao mais distante, separados por ";" (ex.: "28;29") — opcional
+// parameters[8]  = lotes vizinhos à direita (ex.: "26;25") — opcional
 // parameters[9]  = ponto cardeal para onde a frente do lote está voltada: N, NE, L, SE, S, SO, O, NO (ex.: "S")
 // parameters[10] = largura das ruas em m (padrão 12)
 // parameters[11] = testada e profundidade "15;40" — opcional; vazio = lê das linhas de propriedade (ou das paredes) do modelo
@@ -46,7 +46,7 @@ else {
     if (calcada != null) { var p = ((LocationPoint)calcada.Location).Point; double dx = (p.X - (x0 + x1) / 2) / (x1 - x0), dy = (p.Y - (y0 + y1) / 2) / (y1 - y0); frenteEmX = Math.Abs(dx) > Math.Abs(dy); }
     else frenteEmX = (x1 - x0) > (y1 - y0);   // sem calçada: frente no lado menor
     T = (frenteEmX ? (y1 - y0) : (x1 - x0)) * 0.3048; Pr = (frenteEmX ? (x1 - x0) : (y1 - y0)) * 0.3048;
-    T = Math.Round(T * 20) / 20; Pr = Math.Round(Pr * 20) / 20;   // arredonda a 5 cm
+    T = Math.Round(T, 2); Pr = Math.Round(Pr, 2);   // ao centímetro: as medidas têm de bater com as cotas do lote na implantação
     log.AppendLine("Lote lido das " + fonte + ": testada " + T.ToString("0.00") + " m × profundidade " + Pr.ToString("0.00") + " m");
 }
 if (T <= 0 || Pr <= 0) return "ERRO: medidas do lote inválidas";
@@ -107,7 +107,7 @@ using (var t = new Transaction(document, "Skill: planta de situação")) {
     for (int i = 0; i < 4; i++) laco.Append(Line.CreateBound(cantos[i], cantos[(i + 1) % 4]));
     FilledRegion.Create(document, regiaoLote.Id, vista.Id, new List<CurveLoop> { laco });
     L(0, 0, T, 0, gGrossa); L(T, 0, T, Pr, gGrossa); L(T, Pr, 0, Pr, gGrossa); L(0, Pr, 0, 0, gGrossa);
-    Tx(T / 2, Pr * 0.62, "LOTE " + lote, txt, 0); if (quadra != "") Tx(T / 2, Pr * 0.62 - 3.5 * escala / 250.0, "QUADRA " + quadra, txtPeq, 0);
+    Tx(T / 2, Pr * 0.62, "LOTE " + lote, txt, 0); if (quadra != "") Tx(T / 2, Pr * 0.62 - Math.Min(3.5 * escala / 250.0, Pr * 0.17), "QUADRA " + quadra, txtPeq, 0);   // lote pequeno: quadra mais perto do lote, sem encostar na testada
     Tx(T / 2, 1.8 * escala / 250.0, Mf(T), txtPeq, 0);                         // testada
     Tx(T - 1.6 * escala / 250.0, Pr * 0.3, Mf(Pr), txtPeq, Math.PI / 2);       // profundidade
 

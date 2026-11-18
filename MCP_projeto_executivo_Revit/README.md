@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.7.0-A51C1C?style=flat-square">
+  <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.9.0-A51C1C?style=flat-square">
   <img alt="Revit" src="https://img.shields.io/badge/Revit-2025-1E1E1E?style=flat-square">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-mcp--servers--for--revit-1E1E1E?style=flat-square">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1E1E1E?style=flat-square">

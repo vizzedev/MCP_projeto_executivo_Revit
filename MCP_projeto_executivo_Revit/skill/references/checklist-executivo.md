@@ -53,7 +53,10 @@ Coluna **Skill**:
 | Linhas de recuo em azul tracejado | **faz** (`06_implantacao.cs`) |
 | Projeções de pergolados e beirais, com o nome | **faz** (`06_textos.cs`, executivo) |
 | Norte | **faz** (`06_implantacao.cs`) |
-| Abrigo de medidores, caixa de captação (≥ 1,5 m), lixeira, piso tátil, rebaixo do meio-fio (50 cm), ducha (com piscina), casa de gás | **propõe** (`06_elementos_externos.cs`) |
+| Abrigo de medidores, caixa de captação (≥ 1,5 m), lixeira, piso tátil, ducha (com piscina), casa de gás | **propõe** (`06_elementos_externos.cs`) |
+| Meio-fio, sarjeta e rebaixo de veículos (≥ 3,00 m pleno; rampa em trapézio na calçada), com cotas | **faz** (`06_meio_fio.cs` + `06_anotar_planta.cs`) |
+| Projeções do pavimento de cima, da laje e da cobertura/marquise no executivo | **faz** (`06_projecoes.cs`) |
+| Terra nos cortes entre a calçada e o térreo | **faz** (`05_terra_cortes.cs`) |
 | Carimbo: conteúdo, tipo de construção, endereço, data, desenhista, ART/RRT, áreas, nomes e CPF | **faz** (`01_preencher_dados.cs` com o questionário; `calcular_areas_indices.cs`) |
 | Carimbo: QR code | **faz** (PNG gerado pela skill + `08_qrcode.cs`) |
 | Esconder o paisagismo (só na planta de layout) | **faz** (`06_anotar_planta.cs`, `paisagismo`) |

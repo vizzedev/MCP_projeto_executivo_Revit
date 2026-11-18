@@ -22,6 +22,12 @@ Pavimento sem ambientes é ignorado (as vistas dele não entram no caderno).
 3. Ajustes: mover o corte no Revit ou rodar de novo com posição forçada.
 4. Conferir que cada corte atravessa os ambientes (plano no eixo pedido, não na borda da casa).
 5. Aprovado → renomear tirando o prefixo `PROPOSTA ` (CORTE A … D). Escala 1:75, modelo "CORTE EXECUTIVO".
+6. **Terra e nível da calçada** — `scripts/05_terra_cortes.cs` `[vistas; cota da calçada; "refazer"]`: pergunte a cota da
+   calçada em relação ao térreo (ex.: `"-0,30"`). Move o nível CALÇADA, passa calçada e asfalto para ele, desenha "VZ-Terra"
+   de divisa a divisa entre a calçada e o térreo (topo no TERREO N.O se houver) e baixa o recorte inferior dos cortes.
+   Rode de novo com `"refazer"` sempre que criar ou mover um corte.
+7. Recorte lateral dos cortes: o lote inteiro + calçada com folga, e as cabeças do corte **fora das cotas externas** da planta.
+8. **Ordem folha por folha:** os cortes só são anotados e montados depois que a planta executiva estiver anotada e aprovada.
 
 ## 5.2 Fachadas
 `scripts/05_criar_fachadas.cs` — 4 elevações (FRONTAL, POSTERIOR, LATERAL DIREITA, LATERAL ESQUERDA).

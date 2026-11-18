@@ -1,7 +1,7 @@
 // =====================================================================
 // SKILL EXECUTIVO REVIT — Cálculo de áreas e índices do carimbo
 // Execução: MCP do Revit › send_code_to_revit (transactionMode: "none")
-// Versão 0.1 · 13/11/2026 · validado no projeto de referência (bate com o PDF emitido)
+// Versão 0.1 · 13/11/2026 · validado no Família Agra (bate com o PDF emitido)
 // ---------------------------------------------------------------------
 // Fonte das áreas: REGIÕES PREENCHIDAS desenhadas na vista de implantação
 // executiva (padrão do escritório), identificadas pelo FINAL do nome do tipo

@@ -171,3 +171,21 @@ bancadas B02/B03 com cuba e material; tomadas sem rótulo (todas nas alturas pad
    - "PISO <acabamento>" em cada ambiente;
    - "INÍCIO DA PAGINAÇÃO" na porta principal;
    - nota de ralos e, se houver piso com "CANALETA", a nota das canaletas.
+
+## Rodada 0.9.0 (18/11/2026) — planta executiva completa, folha por folha
+- **Cotas externas** (`06_anotar_planta.cs`): recorte ligado e justo às cotas; divisa prevalece sobre muro a < 1 cm; do lado
+  da rua as linhas ficam depois do meio-fio e da sarjeta, e a 1ª é a do rebaixo (planos MF_U do meio-fio); nas faces
+  perpendiculares à rua a cadeia segue até a guia (largura da calçada); borda de piso dentro de parede não é referência;
+  texto de trecho curto sai ao longo da linha para o lado livre; portas para varanda/sacada/garagem contam como vão externo.
+- **Níveis** entre o nome do ambiente e a área (1,4 mm no papel abaixo do ponto do identificador), igual ao layout.
+- **Projeções** (`06_projecoes.cs` `[planta; "refazer"]`): paredes do pavimento de cima ("VZ-Projeção Pav. Superior/Inferior"),
+  borda da laje de cima (PROJEÇÃO PAV. SUPERIOR) e contorno externo da cobertura (PROJEÇÃO COBERTURA; MARQUISE quando passa da
+  laje), tracejados, sem os trechos sobre paredes. Linhas de detalhe não guardam Comentários: o "refazer" apaga pelo estilo
+  "VZ-Projeção…" (menos recuo) e pelos textos "PROJEÇÃO…".
+- **Meio-fio e rebaixo** (`06_meio_fio.cs` `["<início>:<pleno>"; opções]`): ex. `"0,80:3,00"` = rebaixo começando a 0,80 m da
+  divisa esquerda (olhando da rua), 3,00 m pleno. Gera a família "VZ-Meio-Fio com Rebaixo" em `_familias_skill` ao lado do
+  projeto (sólidos de forma livre + planos MF_U/MF_W), refaz a laje da calçada com recorte em trapézio, recria a cota de nível
+  da calçada e põe o asfalto 15 cm abaixo, depois da sarjeta. A família "Calçada, Meio-Fio, Rua" do template não serve.
+  Substitui o item `rebaixo` de `06_elementos_externos.cs`.
+- **Acesso:** "VZ-Acesso Veículos" / "VZ-Acesso Pedestres" na calçada, apontando para o lote, fora da rampa.
+- **Grama no executivo:** filtro "VZ-GRAMA PREENCHIDA" com regra "tipo contém Grama, menos Pisograma/Concregrama".

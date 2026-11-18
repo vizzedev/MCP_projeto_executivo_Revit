@@ -5,7 +5,8 @@
 // AMBIENTE das portas/janelas (vai para a coluna AMBIENTE das tabelas, que agrupam por marca de tipo):
 //   para cada tipo, junta os ambientes onde ele está instalado e escreve um texto único para todas as instâncias do tipo,
 //   ex.: "LAVANDERIA, CIRCULAÇÃO E QUARTOS". Regras (extraídas do projeto de referência):
-//   - porta: vale o ambiente que não é circulação nem área externa; entre dois ambientes internos, o mais reservado
+//   - porta: vale o ambiente que não é circulação nem área externa (um lado SEM ambiente também conta como externo);
+//     entre dois ambientes internos, o mais reservado
 //     (banheiro > quarto > serviço > cozinha > demais); se dá para fora, "<ambiente>/ÁREA EXTERNA";
 //   - janela: vale o ambiente interno; sem ambiente (pavimento sem ambientes) → "FACHADA <LADO>[ - <PAVIMENTO>]";
 //   - agrupamento: 2+ quartos/suítes/apartamentos → "QUARTOS"; 2+ banheiros/WCs/lavabos → "WC's"; CIRC… → "CIRCULAÇÃO".
@@ -67,6 +68,8 @@ Func<FamilyInstance, bool, string> AmbienteDe = (fi, porta) => {
     var lados = new[] { Nome(fi.FromRoom), Nome(fi.ToRoom), Nome(fi.Room) }.Where(n => n != "").Distinct().ToList();
     if (lados.Count == 0) return Fachada(fi);                                   // sem ambiente (ex.: pavimento sem ambientes): nome da fachada
     var internos = lados.Where(n => !Ext(n)).ToList(); var externosL = lados.Where(n => Ext(n)).ToList();
+    // porta com um dos lados sem ambiente (rua, jardim, sacada sem ambiente) também dá para fora
+    if (porta && (fi.FromRoom == null || fi.ToRoom == null) && externosL.Count == 0) externosL.Add("ÁREA EXTERNA");
     if (!porta) return internos.Count > 0 ? internos[0] : lados[0];
     var util = internos.Where(n => !Circ(n)).ToList();
     Func<string, int> Pri = n => Grupo(n) == "WC" ? 0 : Grupo(n) == "QUARTO" ? 1 : new[] { "LAVANDERIA", "SERVIÇO", "SERVICO", "DEPÓSITO", "DEPOSITO", "DESPENSA" }.Any(k => n.Contains(k)) ? 2 : new[] { "COZINHA", "GOURMET" }.Any(k => n.Contains(k)) ? 3 : 4;

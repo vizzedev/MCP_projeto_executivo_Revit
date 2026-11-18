@@ -6,8 +6,8 @@
   "executor_padrao": { "nome": "<<ENG. NOME>>", "crea": "<<CREA: 0000 D/UF>>" },
   "observacoes_gerais": "<<1. ... 2. ...>>",
   "caminhos": {
-    "pasta_base": "<<X:\\pasta\\base>>",
-    "template_master": "<<X:\\pasta\\base\\01_TEMPLATE\\TEMPLATE_MASTER_v1.rte>>",
+    "pasta_base": "P:\\Scanner\\Pedro\\MCP_Revit",
+    "template_master": "P:\\Scanner\\Pedro\\MCP_Revit\\01_TEMPLATE\\TEMPLATE_MASTER_v1.rte",
     "pasta_projetos": "<<pasta padrão dos projetos>>"
   },
   "carimbos": {
